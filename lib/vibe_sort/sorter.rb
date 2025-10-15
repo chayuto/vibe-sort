@@ -115,13 +115,11 @@ module VibeSort
     # @param sorted_array [Object] Parsed sorted array
     # @raise [VibeSort::ApiError] if validation fails
     def validate_sorted_array!(sorted_array)
-      unless sorted_array.is_a?(Array)
-        raise ApiError.new("Response does not contain a valid 'sorted_array'")
-      end
+      raise ApiError, "Response does not contain a valid 'sorted_array'" unless sorted_array.is_a?(Array)
 
-      unless sorted_array.all? { |item| item.is_a?(Numeric) || item.is_a?(String) }
-        raise ApiError.new("Sorted array contains invalid values (must be numbers or strings)")
-      end
+      return if sorted_array.all? { |item| item.is_a?(Numeric) || item.is_a?(String) }
+
+      raise ApiError, "Sorted array contains invalid values (must be numbers or strings)"
     end
   end
 end
