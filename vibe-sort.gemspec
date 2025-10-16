@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name = "vibe-sort"
   spec.version = VibeSort::VERSION
   spec.authors = ["Chayut Orapinpatipat"]
-  spec.email = ["chayut@canopusnet.com"]
+  spec.email = ["chayut_o@hotmail.com"]
 
   spec.summary = "AI-powered array sorting using OpenAI's GPT models"
   spec.description = "A proof-of-concept Ruby gem that sorts number arrays by leveraging the OpenAI Chat Completions API. Demonstrates how AI can be used for computational tasks."
