@@ -239,16 +239,6 @@ require 'dotenv/load'
 client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
 ```
 
-## 🤝 Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/chayut/vibe-sort.
-
-1. Fork it
-2. Create your feature branch (`git checkout -b feature/my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin feature/my-new-feature`)
-5. Create a new Pull Request
-
 ## 📄 License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
@@ -258,12 +248,6 @@ The gem is available as open source under the terms of the [MIT License](https:/
 - Built with [Faraday](https://lostisland.github.io/faraday/) for HTTP requests
 - Powered by [OpenAI](https://openai.com/) GPT models
 - Inspired by the absurdity and creativity of the AI era
-
-## 📞 Support
-
-- 🐛 [Report a bug](https://github.com/chayut/vibe-sort/issues)
-- 💡 [Request a feature](https://github.com/chayut/vibe-sort/issues)
-- 📖 [Read the docs](docs/)
 
 ---
 
