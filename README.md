@@ -21,6 +21,13 @@ This is a **proof-of-concept** and educational project. It is not intended for p
 - 🔍 **Type Validation**: Validates input and output to ensure data integrity
 - 📝 **Mixed-Type Support**: Sorts arrays containing integers, floats, and strings
 
+## ✅ Requirements
+
+- Ruby **3.0** or newer (MRI)
+- Bundler **2.0+**
+- An OpenAI API key with access to the Chat Completions API
+- Internet connectivity (each sort performs a remote API call)
+
 ## 📦 Installation
 
 Add this line to your application's Gemfile:
@@ -39,6 +46,25 @@ Or install it yourself as:
 
 ```bash
 gem install vibe-sort
+```
+
+## ⚡ Quick Start
+
+```bash
+export OPENAI_API_KEY="your-openai-api-key"
+bundle exec ruby -e "require 'vibe_sort'; client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY']); puts client.sort([34, 1, 'Apple', 8.5])"
+```
+
+Or fire up the bundled console for interactive experimentation:
+
+```bash
+OPENAI_API_KEY=your-openai-api-key bundle exec bin/console
+```
+
+```ruby
+client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
+client.sort([34, 1, 'Apple', 8.5])
+# => { success: true, sorted_array: [1, 8.5, 34, "Apple"] }
 ```
 
 ## 🚀 Usage
@@ -192,7 +218,7 @@ bundle exec rspec
 bundle exec rspec --format documentation
 
 # Run specific test file
-bundle exec rspec spec/vibe_sort/client_spec.rb
+bundle exec rspec spec/vibe/sort_spec.rb
 ```
 
 ## 🤔 Why Does This Exist?
@@ -215,6 +241,7 @@ This gem was created as an educational exercise to:
 - **Scale**: Not suitable for large arrays or high-frequency sorting
 
 Traditional sorting (e.g., Ruby's `Array#sort`) is:
+
 - ⚡ **10,000x faster** (microseconds vs seconds)
 - 💰 **Free** (no API costs)
 - 🎯 **100% reliable** (deterministic algorithm)
