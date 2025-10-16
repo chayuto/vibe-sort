@@ -10,13 +10,13 @@ Gem::Specification.new do |spec|
 
   spec.summary = "AI-powered array sorting using OpenAI's GPT models"
   spec.description = "A proof-of-concept Ruby gem that sorts number arrays by leveraging the OpenAI Chat Completions API. Demonstrates how AI can be used for computational tasks."
-  spec.homepage = "https://github.com/chayut/vibe-sort"
+  spec.homepage = "https://github.com/chayuto/vibe-sort"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://github.com/chayut/vibe-sort"
-  spec.metadata["changelog_uri"] = "https://github.com/chayut/vibe-sort/blob/main/CHANGELOG.md"
+  spec.metadata["source_code_uri"] = "https://github.com/chayuto/vibe-sort"
+  spec.metadata["changelog_uri"] = "https://github.com/chayuto/vibe-sort/blob/main/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
 
   # Specify which files should be added to the gem when it is released.
