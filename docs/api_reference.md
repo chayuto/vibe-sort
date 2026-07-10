@@ -6,29 +6,39 @@ The main public interface for the VibeSort gem.
 
 ### Class Methods
 
-#### `new(api_key:, temperature: 0.0)`
+#### `new(api_key:, temperature: 0.0, provider: :openai, model: nil)`
 
 Creates a new VibeSort client instance.
 
 **Parameters:**
 
-- `api_key` (String, required): Your OpenAI API key
+- `api_key` (String, required): API key for the selected provider
 - `temperature` (Float, optional): Model temperature setting (default: 0.0)
   - Range: 0.0 to 2.0
   - Lower values (0.0-0.3): More deterministic and consistent
   - Higher values (0.7-2.0): More random and creative
+  - Ignored by providers whose current models do not accept it (Anthropic)
+- `provider` (Symbol or String, optional): LLM provider (default: `:openai`)
+  - Supported: `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`
+- `model` (String, optional): Model ID override (default: the provider's default model)
 
 **Returns:** `VibeSort::Client` instance
 
 **Raises:**
 
-- `ArgumentError`: If api_key is nil or empty
+- `ArgumentError`: If api_key is nil or empty, or the provider is unknown
 
 **Example:**
 
 ```ruby
-# Basic initialization
+# Basic initialization (OpenAI, default provider)
 client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
+
+# Anthropic Claude
+client = VibeSort::Client.new(provider: :anthropic, api_key: ENV['ANTHROPIC_API_KEY'])
+
+# Google Gemini with a custom model
+client = VibeSort::Client.new(provider: :gemini, api_key: ENV['GEMINI_API_KEY'], model: 'gemini-2.5-pro')
 
 # With custom temperature
 client = VibeSort::Client.new(
@@ -41,7 +51,7 @@ client = VibeSort::Client.new(
 
 #### `sort(array)`
 
-Sorts an array of numbers and/or strings using OpenAI's API.
+Sorts an array of numbers and/or strings using the configured provider's API.
 
 **Parameters:**
 
@@ -100,25 +110,28 @@ Configuration object for VibeSort. Usually not used directly by end users.
 
 ### Class Methods
 
-#### `new(api_key:, temperature: 0.0)`
+#### `new(api_key:, temperature: 0.0, provider: :openai, model: nil)`
 
 Creates a new configuration object.
 
 **Parameters:**
 
-- `api_key` (String, required): OpenAI API key
+- `api_key` (String, required): API key for the selected provider
 - `temperature` (Float, optional): Model temperature (default: 0.0)
+- `provider` (Symbol or String, optional): `:openai` (default), `:anthropic`, `:gemini`, `:groq`, or `:spacexai`
+- `model` (String, optional): Model ID override (nil uses the provider's default)
 
 **Raises:**
 
-- `ArgumentError`: If api_key is nil or empty
+- `ArgumentError`: If api_key is nil or empty, or the provider is unknown
 
 **Example:**
 
 ```ruby
 config = VibeSort::Configuration.new(
   api_key: "sk-...",
-  temperature: 0.0
+  provider: :anthropic,
+  model: "claude-haiku-4-5"
 )
 ```
 
@@ -136,11 +149,23 @@ Returns the configured temperature setting (read-only).
 
 **Returns:** Float
 
+#### `provider`
+
+Returns the configured provider (read-only).
+
+**Returns:** Symbol
+
+#### `model`
+
+Returns the configured model override, or nil when using the provider default (read-only).
+
+**Returns:** String or nil
+
 ---
 
 ## VibeSort::Sorter
 
-Internal class that handles API communication. Not intended for direct use.
+Internal class that dispatches the sorting operation to the configured provider adapter. Not intended for direct use.
 
 ### Class Methods
 
@@ -156,7 +181,7 @@ Creates a new sorter instance.
 
 #### `perform(array)`
 
-Performs the sorting operation via OpenAI API.
+Performs the sorting operation via the configured provider's API.
 
 **Parameters:**
 
@@ -170,17 +195,30 @@ Performs the sorting operation via OpenAI API.
 
 ### Constants
 
-#### `OPENAI_API_URL`
+#### `PROVIDER_CLASSES`
 
-The OpenAI API endpoint URL.
+Maps provider symbols to adapter classes.
 
-**Value:** `"https://api.openai.com/v1/chat/completions"`
+**Value:** `{ openai:, anthropic:, gemini:, groq:, spacexai: }`
 
-#### `DEFAULT_MODEL`
+---
 
-The default GPT model used for sorting.
+## VibeSort::Providers
 
-**Value:** `"gpt-3.5-turbo-1106"`
+Internal provider adapters. `Providers::Base` holds the shared prompt, Faraday HTTP plumbing, and response validation; each subclass maps one provider's request/response wire format.
+
+| Adapter | Endpoint | `DEFAULT_MODEL` |
+|---|---|---|
+| `Providers::OpenAI` | `https://api.openai.com/v1/chat/completions` | `gpt-4o-mini` |
+| `Providers::Anthropic` | `https://api.anthropic.com/v1/messages` | `claude-opus-4-8` |
+| `Providers::Gemini` | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | `gemini-2.5-flash` |
+| `Providers::Groq` | `https://api.groq.com/openai/v1/chat/completions` | `llama-3.3-70b-versatile` |
+| `Providers::SpaceXAI` | `https://api.x.ai/v1/chat/completions` | `grok-4` |
+
+Notes:
+
+- The Anthropic adapter uses structured outputs (JSON schema) and does not send `temperature` (rejected by current Claude models)
+- The Groq and SpaceXAI adapters subclass `Providers::OpenAI` (OpenAI-compatible APIs)
 
 ---
 
@@ -269,11 +307,13 @@ All sorting operations return a consistent hash structure:
 
 ### API Errors
 
+The `{Provider}` prefix names the configured provider (OpenAI, Anthropic, Gemini, Groq, or SpaceXAI):
+
 | Error Message Pattern | Cause | Solution |
 |----------------------|-------|----------|
-| "OpenAI API error: Invalid API key" | Invalid or missing API key | Check API key |
-| "OpenAI API error: Rate limit exceeded" | Too many requests | Wait and retry |
-| "OpenAI API error: HTTP {status}" | HTTP error | Check API status |
+| "{Provider} API error: Invalid API key" | Invalid or missing API key | Check API key |
+| "{Provider} API error: Rate limit exceeded" | Too many requests | Wait and retry |
+| "{Provider} API error: HTTP {status}" | HTTP error | Check API status |
 
 ### Response Parsing Errors
 
@@ -412,14 +452,14 @@ results = threads.map(&:value)
 
 ## Environment Variables
 
-### OPENAI_API_KEY
-
-Your OpenAI API key. Required for all operations.
-
-**Setup:**
+Set the API key for whichever provider you use:
 
 ```bash
-export OPENAI_API_KEY='sk-your-key-here'
+export OPENAI_API_KEY='sk-your-key-here'      # provider: :openai (default)
+export ANTHROPIC_API_KEY='your-key-here'      # provider: :anthropic
+export GEMINI_API_KEY='your-key-here'         # provider: :gemini
+export GROQ_API_KEY='your-key-here'           # provider: :groq
+export XAI_API_KEY='your-key-here'            # provider: :spacexai
 ```
 
 **Usage:**
@@ -432,9 +472,9 @@ client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
 
 ## Version
 
-Current version: `0.1.0`
+Current version: `0.3.0`
 
 ```ruby
 VibeSort::VERSION
-# => "0.1.0"
+# => "0.3.0"
 ```
