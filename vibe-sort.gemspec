@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["Chayut Orapinpatipat"]
   spec.email = ["chayut_o@hotmail.com"]
 
-  spec.summary = "AI-powered array sorting using OpenAI's GPT models"
-  spec.description = "A proof-of-concept Ruby gem that sorts number arrays by leveraging the OpenAI Chat Completions API. Demonstrates how AI can be used for computational tasks."
+  spec.summary = "AI-powered array sorting using OpenAI, Anthropic Claude, or Google Gemini"
+  spec.description = "A proof-of-concept Ruby gem that sorts arrays by leveraging LLM APIs (OpenAI Chat Completions, Anthropic Messages, Google Gemini). Demonstrates how AI can be used for computational tasks."
   spec.homepage = "https://github.com/chayuto/vibe-sort"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0.0"

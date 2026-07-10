@@ -1,8 +1,8 @@
 # 🌀 VibeSort
 
-> **AI-powered array sorting using OpenAI's GPT models**
+> **AI-powered array sorting using OpenAI, Anthropic Claude, Google Gemini, Groq, or SpaceXAI Grok**
 
-VibeSort is a proof-of-concept Ruby gem that demonstrates sorting number arrays by leveraging the OpenAI Chat Completions API. Instead of using traditional sorting algorithms, it asks GPT to do the work!
+VibeSort is a proof-of-concept Ruby gem that demonstrates sorting arrays by leveraging LLM APIs. Instead of using traditional sorting algorithms, it asks an AI model to do the work! Supports the OpenAI Chat Completions API, the Anthropic Messages API, the Google Gemini API, and the OpenAI-compatible Groq and SpaceXAI (xAI) APIs — with zero dependencies beyond Faraday.
 
 [![Gem Version](https://badge.fury.io/rb/vibe-sort.svg)](https://badge.fury.io/rb/vibe-sort)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -13,9 +13,10 @@ This is a **proof-of-concept** and educational project. It is not intended for p
 
 ## ✨ Features
 
-- 🤖 **AI-Powered Sorting**: Uses OpenAI's GPT models to sort arrays
+- 🤖 **AI-Powered Sorting**: Uses OpenAI, Anthropic Claude, Google Gemini, Groq, or SpaceXAI Grok models to sort arrays
+- 🔌 **Multi-Provider**: Switch providers with a single `provider:` option — no extra dependencies
 - 🎯 **Simple Interface**: Clean, intuitive API with a single `sort` method
-- 🔧 **Configurable**: Supports custom temperature settings for model behavior
+- 🔧 **Configurable**: Supports custom model and temperature settings
 - 🛡️ **Error Handling**: Comprehensive error handling with clear error messages
 - 📊 **Structured Output**: Uses JSON mode for reliable, parsable responses
 - 🔍 **Type Validation**: Validates input and output to ensure data integrity
@@ -25,7 +26,7 @@ This is a **proof-of-concept** and educational project. It is not intended for p
 
 - Ruby **3.0** or newer (MRI)
 - Bundler **2.0+**
-- An OpenAI API key with access to the Chat Completions API
+- An API key for at least one supported provider (OpenAI, Anthropic, or Google Gemini)
 - Internet connectivity (each sort performs a remote API call)
 
 ## 📦 Installation
@@ -118,6 +119,46 @@ if result[:success]
 end
 ```
 
+### Choosing a Provider
+
+VibeSort defaults to OpenAI, but any supported provider can be selected with the `provider:` option:
+
+```ruby
+# OpenAI (default)
+client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
+
+# Anthropic Claude
+client = VibeSort::Client.new(provider: :anthropic, api_key: ENV['ANTHROPIC_API_KEY'])
+
+# Google Gemini
+client = VibeSort::Client.new(provider: :gemini, api_key: ENV['GEMINI_API_KEY'])
+
+# Groq (fast open-model inference)
+client = VibeSort::Client.new(provider: :groq, api_key: ENV['GROQ_API_KEY'])
+
+# SpaceXAI (formerly xAI) Grok
+client = VibeSort::Client.new(provider: :spacexai, api_key: ENV['XAI_API_KEY'])
+```
+
+| Provider | API | Default model | Override with `model:` |
+|---|---|---|---|
+| `:openai` | Chat Completions | `gpt-4o-mini` | any chat model |
+| `:anthropic` | Messages | `claude-opus-4-8` | e.g. `claude-haiku-4-5` for cheaper sorts |
+| `:gemini` | generateContent | `gemini-2.5-flash` | e.g. `gemini-2.5-pro` |
+| `:groq` | Chat Completions (OpenAI-compatible) | `llama-3.3-70b-versatile` | any Groq-hosted model |
+| `:spacexai` | Chat Completions (OpenAI-compatible) | `grok-4` | e.g. `grok-4.5` |
+
+> **Groq ≠ Grok**: Groq is the independent fast-inference company (`api.groq.com`); Grok is SpaceXAI's model (`api.x.ai`). They are unrelated — VibeSort supports both.
+
+```ruby
+# Pick a specific model
+client = VibeSort::Client.new(
+  provider: :anthropic,
+  api_key: ENV['ANTHROPIC_API_KEY'],
+  model: 'claude-haiku-4-5'
+)
+```
+
 ### Advanced Configuration
 
 You can customize the model's behavior using the `temperature` parameter:
@@ -135,6 +176,8 @@ creative_client = VibeSort::Client.new(
   temperature: 0.5
 )
 ```
+
+> **Note**: current Anthropic Claude models no longer accept a `temperature` parameter, so it is ignored when `provider: :anthropic` is used.
 
 ### Error Handling
 
@@ -181,8 +224,10 @@ The `sort` method always returns a hash with the following structure:
 VibeSort follows a clean, modular architecture:
 
 - **`VibeSort::Client`**: Public interface for users
-- **`VibeSort::Configuration`**: Manages API key and settings
-- **`VibeSort::Sorter`**: Handles OpenAI API communication via Faraday
+- **`VibeSort::Configuration`**: Manages provider, API key, model, and settings
+- **`VibeSort::Sorter`**: Dispatches to the configured provider adapter
+- **`VibeSort::Providers::Base`**: Shared prompt, HTTP plumbing (Faraday), and response validation
+- **`VibeSort::Providers::{OpenAI, Anthropic, Gemini}`**: Provider-specific request/response mapping
 - **`VibeSort::ApiError`**: Custom exception for API-related errors
 
 See the [Architecture Documentation](docs/architecture.md) for more details.
@@ -249,10 +294,14 @@ Traditional sorting (e.g., Ruby's `Array#sort`) is:
 
 ## 🔑 Environment Variables
 
-Set your OpenAI API key as an environment variable:
+Set the API key for your chosen provider as an environment variable:
 
 ```bash
-export OPENAI_API_KEY='your-api-key-here'
+export OPENAI_API_KEY='your-api-key-here'     # provider: :openai (default)
+export ANTHROPIC_API_KEY='your-api-key-here'  # provider: :anthropic
+export GEMINI_API_KEY='your-api-key-here'     # provider: :gemini
+export GROQ_API_KEY='your-api-key-here'       # provider: :groq
+export XAI_API_KEY='your-api-key-here'        # provider: :spacexai
 ```
 
 Or use a `.env` file with the `dotenv` gem:
@@ -273,7 +322,7 @@ The gem is available as open source under the terms of the [MIT License](https:/
 ## 🙏 Acknowledgments
 
 - Built with [Faraday](https://lostisland.github.io/faraday/) for HTTP requests
-- Powered by [OpenAI](https://openai.com/) GPT models
+- Powered by [OpenAI](https://openai.com/), [Anthropic](https://www.anthropic.com/), and [Google Gemini](https://ai.google.dev/) models
 - Inspired by the absurdity and creativity of the AI era
 
 ---
