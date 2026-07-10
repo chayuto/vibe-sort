@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "sort/version"
-
-module Vibe
-  module Sort
-    class Error < StandardError; end
-    # Your code goes here...
-  end
-end
+# Compatibility shim: Bundler autorequires "vibe/sort" for a gem named
+# "vibe-sort", so `gem "vibe-sort"` in a Gemfile loads the real library
+# without needing an explicit `require "vibe_sort"`.
+require_relative "../vibe_sort"

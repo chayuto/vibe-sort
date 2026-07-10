@@ -7,17 +7,26 @@ module VibeSort
 
     # Initialize a new VibeSort client
     #
-    # @param api_key [String] OpenAI API key
-    # @param temperature [Float] Temperature for the model (default: 0.0)
-    # @raise [ArgumentError] if api_key is invalid
+    # @param api_key [String] API key for the selected provider
+    # @param temperature [Float] Temperature for the model (default: 0.0).
+    #   Ignored by providers whose current models do not accept it (Anthropic).
+    # @param provider [Symbol, String] LLM provider: :openai (default), :anthropic, or :gemini
+    # @param model [String, nil] Model ID override (nil uses the provider's default)
+    # @raise [ArgumentError] if api_key or provider is invalid
     #
-    # @example
+    # @example OpenAI (default provider)
     #   client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
-    def initialize(api_key:, temperature: 0.0)
-      @config = Configuration.new(api_key: api_key, temperature: temperature)
+    #
+    # @example Anthropic Claude
+    #   client = VibeSort::Client.new(provider: :anthropic, api_key: ENV['ANTHROPIC_API_KEY'])
+    #
+    # @example Google Gemini with a custom model
+    #   client = VibeSort::Client.new(provider: :gemini, api_key: ENV['GEMINI_API_KEY'], model: 'gemini-2.5-pro')
+    def initialize(api_key:, temperature: 0.0, provider: :openai, model: nil)
+      @config = Configuration.new(api_key: api_key, temperature: temperature, provider: provider, model: model)
     end
 
-    # Sort an array of numbers and/or strings using OpenAI API
+    # Sort an array of numbers and/or strings using the configured provider's API
     #
     # @param array [Array] Array of numbers and/or strings to sort
     # @return [Hash] Result hash with keys:
@@ -44,6 +53,7 @@ module VibeSort
     # @example API error
     #   result = client.sort([1, 2, 3]) # with invalid API key
     #   #=> { success: false, sorted_array: [], error: "OpenAI API error: Invalid API key" }
+    #   # The error prefix names the configured provider (OpenAI, Anthropic, or Gemini)
     def sort(array)
       # Validate input
       unless valid_input?(array)

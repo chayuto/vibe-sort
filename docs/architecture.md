@@ -20,24 +20,36 @@ VibeSort follows a layered architecture with clear separation of concerns:
                   ▼
 ┌─────────────────────────────────────────┐
 │    VibeSort::Configuration              │
+│  - Provider selection                   │
 │  - API key management                   │
+│  - Model override                       │
 │  - Temperature settings                 │
 └─────────────────┬───────────────────────┘
                   │
                   ▼
 ┌─────────────────────────────────────────┐
-│      VibeSort::Sorter                   │
-│  - HTTP client (Faraday)                │
-│  - Request building                     │
-│  - Response parsing                     │
-│  - Validation                           │
+│      VibeSort::Sorter (dispatcher)      │
+│  - Picks the provider adapter           │
 └─────────────────┬───────────────────────┘
                   │
                   ▼
 ┌─────────────────────────────────────────┐
-│      OpenAI API                         │
-│  https://api.openai.com/v1/chat/       │
-│  completions                            │
+│   VibeSort::Providers::Base             │
+│  - Shared prompt                        │
+│  - HTTP client (Faraday)                │
+│  - Response parsing & validation        │
+├─────────────────────────────────────────┤
+│  OpenAI │ Anthropic │ Gemini │          │
+│  Groq   │ SpaceXAI                      │
+│  (request/response wire formats)        │
+└─────────────────┬───────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────┐
+│      Provider API (HTTPS)               │
+│  api.openai.com │ api.anthropic.com     │
+│  generativelanguage.googleapis.com      │
+│  api.groq.com   │ api.x.ai              │
 └─────────────────────────────────────────┘
 ```
 
@@ -55,7 +67,7 @@ VibeSort follows a layered architecture with clear separation of concerns:
 - Return standardized response hashes
 
 **Key Methods**:
-- `initialize(api_key:, temperature: 0.0)`: Creates client with configuration
+- `initialize(api_key:, temperature: 0.0, provider: :openai, model: nil)`: Creates client with configuration
 - `sort(array)`: Sorts array and returns result hash
 
 **Return Format**:
@@ -72,41 +84,46 @@ VibeSort follows a layered architecture with clear separation of concerns:
 **Purpose**: Encapsulates configuration settings.
 
 **Responsibilities**:
-- Store API key securely
-- Store temperature setting
-- Validate API key presence
+- Store provider selection and API key
+- Store model override and temperature setting
+- Validate API key presence and provider name
 
 **Key Methods**:
-- `initialize(api_key:, temperature:)`: Creates configuration
-- Raises `ArgumentError` if API key is nil or empty
+- `initialize(api_key:, temperature: 0.0, provider: :openai, model: nil)`: Creates configuration
+- Raises `ArgumentError` if API key is nil/empty or provider is unknown
 
 **Attributes**:
-- `api_key`: OpenAI API key (String)
-- `temperature`: Model temperature (Float, 0.0-2.0)
+- `api_key`: Provider API key (String)
+- `provider`: `:openai`, `:anthropic`, `:gemini`, `:groq`, or `:spacexai` (Symbol)
+- `model`: Model ID override, or nil for the provider default (String or nil)
+- `temperature`: Model temperature (Float, 0.0-2.0; not sent to Anthropic)
 
 ### VibeSort::Sorter
 
-**Purpose**: Handles communication with OpenAI API.
-
-**Responsibilities**:
-- Build HTTP connection with Faraday
-- Construct API request payload
-- Send POST request to OpenAI
-- Parse and validate JSON responses
-- Extract sorted array from response
-- Raise `ApiError` on failures
+**Purpose**: Dispatches the sort to the configured provider adapter.
 
 **Key Methods**:
 - `initialize(config)`: Creates sorter with configuration
-- `perform(array)`: Executes sort via API
-- `build_payload(array)`: Private - constructs request
-- `handle_response(response)`: Private - processes response
-- `parse_sorted_array(response)`: Private - extracts result
-- `validate_sorted_array!(array)`: Private - validates output
+- `perform(array)`: Looks up the adapter in `PROVIDER_CLASSES` and delegates
 
-**Constants**:
-- `OPENAI_API_URL`: API endpoint
-- `DEFAULT_MODEL`: "gpt-3.5-turbo-1106" (supports JSON mode)
+### VibeSort::Providers
+
+**Purpose**: One adapter per LLM provider, all sharing a common base.
+
+**`Providers::Base` responsibilities**:
+- Hold the shared sorting prompt
+- Build the HTTP connection with Faraday
+- Parse and validate JSON responses (shared across providers)
+- Raise `ApiError` on failures
+
+**Adapter hooks** (implemented per provider): `provider_name`, `endpoint`, `headers`, `build_payload`, `extract_content`
+
+**Adapters and default models**:
+- `Providers::OpenAI` — Chat Completions, `gpt-4o-mini`
+- `Providers::Anthropic` — Messages API with structured outputs (JSON schema), `claude-opus-4-8`
+- `Providers::Gemini` — generateContent with JSON response mode, `gemini-2.5-flash`
+- `Providers::Groq` — OpenAI-compatible (subclasses `Providers::OpenAI`), `llama-3.3-70b-versatile`
+- `Providers::SpaceXAI` — OpenAI-compatible (subclasses `Providers::OpenAI`), `grok-4`
 
 ### VibeSort::ApiError
 
@@ -132,12 +149,12 @@ VibeSort follows a layered architecture with clear separation of concerns:
 
 3. **Client creates Sorter**
    - Passes Configuration object
-   - Sorter initializes Faraday connection
+   - Sorter picks the provider adapter, which initializes a Faraday connection
 
-4. **Sorter builds request payload**
+4. **Adapter builds the provider-specific request payload** (OpenAI example)
    ```json
    {
-     "model": "gpt-3.5-turbo-1106",
+     "model": "gpt-4o-mini",
      "temperature": 0.0,
      "response_format": { "type": "json_object" },
      "messages": [
@@ -153,16 +170,16 @@ VibeSort follows a layered architecture with clear separation of concerns:
    }
    ```
 
-5. **Sorter sends POST request**
-   - URL: `https://api.openai.com/v1/chat/completions`
-   - Headers: Authorization (Bearer token), Content-Type
+5. **Adapter sends POST request**
+   - URL: the adapter's endpoint (e.g. `https://api.openai.com/v1/chat/completions`)
+   - Headers: provider auth (Bearer token, `x-api-key`, or `x-goog-api-key`), Content-Type
    - Body: JSON payload
 
-6. **OpenAI processes request**
+6. **Provider processes request**
    - Model analyzes the array
    - Returns JSON with sorted array
 
-7. **Sorter parses response**
+7. **Adapter parses response** (OpenAI example)
    ```json
    {
      "choices": [{
@@ -227,8 +244,7 @@ VibeSort follows a layered architecture with clear separation of concerns:
 ## Dependencies
 
 ### Runtime
-- **faraday** (~> 2.0): HTTP client library
-- **faraday-json** (~> 1.0): JSON middleware for Faraday
+- **faraday** (~> 2.0): HTTP client library — the only runtime dependency; all providers are called over plain HTTPS
 
 ### Development
 - **rspec** (~> 3.0): Testing framework
@@ -236,8 +252,11 @@ VibeSort follows a layered architecture with clear separation of concerns:
 
 ## Design Decisions
 
-### Why JSON Mode?
-OpenAI's JSON mode (`response_format: { type: "json_object" }`) ensures the model always returns valid JSON, making parsing more reliable.
+### Why JSON Mode / Structured Outputs?
+Each adapter uses the strongest JSON guarantee its provider offers: OpenAI-compatible providers use JSON mode (`response_format: { type: "json_object" }`), Anthropic uses structured outputs with a JSON schema, and Gemini uses `responseMimeType: "application/json"`. This makes parsing reliable across providers.
+
+### Why Raw HTTP Instead of Provider SDKs?
+Three simple JSON POSTs don't justify three SDK dependencies. Keeping everything on Faraday keeps the gem lightweight and the adapters symmetric.
 
 ### Why Temperature 0.0 by Default?
 Lower temperature (0.0) produces deterministic, consistent results. Sorting should be predictable, not creative!
@@ -312,8 +331,7 @@ Potential improvements for future versions:
 
 1. **Batch Sorting**: Sort multiple arrays in one API call
 2. **Caching**: Cache results for identical inputs
-3. **Custom Models**: Allow users to specify different GPT models
-4. **Retry Logic**: Automatic retry on transient failures
+3. **Retry Logic**: Automatic retry on transient failures
 5. **Async Support**: Non-blocking API calls with callbacks
 6. **Metrics**: Track API usage, costs, and performance
 7. **Different Sort Orders**: Support descending order

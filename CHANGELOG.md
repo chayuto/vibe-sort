@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-10
+
+### Added
+
+- **Multi-Provider Support**: Sort via OpenAI, Anthropic Claude, Google Gemini, Groq, or SpaceXAI (xAI) Grok
+- `provider:` option on `VibeSort::Client.new` (`:openai` default, `:anthropic`, `:gemini`, `:groq`, `:spacexai`)
+- `model:` option to override each provider's default model
+- `VibeSort::Providers::Base` adapter layer with per-provider subclasses
+- Anthropic adapter uses the Messages API with structured outputs (JSON schema), guaranteeing the response shape
+- Gemini adapter uses `generateContent` with JSON response mode
+- Groq and SpaceXAI adapters reuse the OpenAI-compatible Chat Completions wire format
+- Provider-specific test suites backed by WebMock
+
+### Changed
+
+- `VibeSort::Sorter` is now a thin dispatcher to the configured provider adapter
+- OpenAI default model updated from the deprecated `gpt-3.5-turbo-1106` to `gpt-4o-mini`
+- Error messages are prefixed with the provider name (e.g. "Anthropic API error: ...")
+- `temperature` is not sent to Anthropic (current Claude models reject the parameter)
+
+### Notes
+
+- Fully backward compatible: `VibeSort::Client.new(api_key: ...)` still defaults to OpenAI
+- Still zero runtime dependencies beyond Faraday — all providers are called over plain HTTPS
+
 ## [0.2.0] - 2025-10-16
 
 ### Added
