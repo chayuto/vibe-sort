@@ -1,35 +1,35 @@
-# 🌀 VibeSort
+# VibeSort
 
 > **AI-powered array sorting using OpenAI, Anthropic Claude, Google Gemini, Groq, or SpaceXAI Grok**
 
-VibeSort is a proof-of-concept Ruby gem that demonstrates sorting arrays by leveraging LLM APIs. Instead of using traditional sorting algorithms, it asks an AI model to do the work! Supports the OpenAI Chat Completions API, the Anthropic Messages API, the Google Gemini API, and the OpenAI-compatible Groq and SpaceXAI (xAI) APIs — with zero dependencies beyond Faraday.
+VibeSort is a proof-of-concept Ruby gem that demonstrates sorting arrays by leveraging LLM APIs. Instead of using traditional sorting algorithms, it asks an AI model to do the work. Supports the OpenAI Chat Completions API, the Anthropic Messages API, the Google Gemini API, and the OpenAI-compatible Groq and SpaceXAI (xAI) APIs, with zero dependencies beyond Faraday.
 
 [![Gem Version](https://badge.fury.io/rb/vibe-sort.svg)](https://badge.fury.io/rb/vibe-sort)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## ⚠️ Disclaimer
+## Disclaimer
 
-This is a **proof-of-concept** and educational project. It is not intended for production use. Traditional sorting algorithms are far more efficient, reliable, and cost-effective. Use this gem to explore AI capabilities, not to sort arrays in real applications!
+This is a **proof-of-concept** and educational project. It is not intended for production use. Traditional sorting algorithms are far more efficient, reliable, and cost-effective. Use this gem to explore AI capabilities, not to sort arrays in real applications.
 
-## ✨ Features
+## Features
 
-- 🤖 **AI-Powered Sorting**: Uses OpenAI, Anthropic Claude, Google Gemini, Groq, or SpaceXAI Grok models to sort arrays
-- 🔌 **Multi-Provider**: Switch providers with a single `provider:` option — no extra dependencies
-- 🎯 **Simple Interface**: Clean, intuitive API with a single `sort` method
-- 🔧 **Configurable**: Supports custom model and temperature settings
-- 🛡️ **Error Handling**: Comprehensive error handling with clear error messages
-- 📊 **Structured Output**: Uses JSON mode for reliable, parsable responses
-- 🔍 **Type Validation**: Validates input and output to ensure data integrity
-- 📝 **Mixed-Type Support**: Sorts arrays containing integers, floats, and strings
+- **AI-Powered Sorting**: Uses OpenAI, Anthropic Claude, Google Gemini, Groq, or SpaceXAI Grok models to sort arrays
+- **Multi-Provider**: Switch providers with a single `provider:` option, no extra dependencies
+- **Simple Interface**: Clean, intuitive API with a single `sort` method
+- **Configurable**: Supports custom model and temperature settings
+- **Error Handling**: Comprehensive error handling with clear error messages
+- **Structured Output**: Uses JSON mode for reliable, parsable responses
+- **Type Validation**: Validates input and output to ensure data integrity
+- **Mixed-Type Support**: Sorts arrays containing integers, floats, and strings
 
-## ✅ Requirements
+## Requirements
 
 - Ruby **3.0** or newer (MRI)
 - Bundler **2.0+**
-- An API key for at least one supported provider (OpenAI, Anthropic, or Google Gemini)
+- An API key for at least one supported provider (OpenAI, Anthropic, Google Gemini, Groq, or SpaceXAI)
 - Internet connectivity (each sort performs a remote API call)
 
-## 📦 Installation
+## Installation
 
 Add this line to your application's Gemfile:
 
@@ -49,7 +49,7 @@ Or install it yourself as:
 gem install vibe-sort
 ```
 
-## ⚡ Quick Start
+## Quick Start
 
 ```bash
 export OPENAI_API_KEY="your-openai-api-key"
@@ -68,7 +68,7 @@ client.sort([34, 1, 'Apple', 8.5])
 # => { success: true, sorted_array: [1, 8.5, 34, "Apple"] }
 ```
 
-## 🚀 Usage
+## Usage
 
 ### Basic Usage
 
@@ -83,12 +83,12 @@ numbers = [34, 1, 99, 15, 8]
 result = client.sort(numbers)
 
 if result[:success]
-  puts "✅ Vibe Sort successful!"
+  puts "Vibe Sort successful!"
   puts "Original: #{numbers}"
   puts "Sorted: #{result[:sorted_array]}"
   # Output: [1, 8, 15, 34, 99]
 else
-  puts "❌ Vibe Sort failed: #{result[:error]}"
+  puts "Vibe Sort failed: #{result[:error]}"
 end
 ```
 
@@ -148,7 +148,7 @@ client = VibeSort::Client.new(provider: :spacexai, api_key: ENV['XAI_API_KEY'])
 | `:groq` | Chat Completions (OpenAI-compatible) | `llama-3.3-70b-versatile` | any Groq-hosted model |
 | `:spacexai` | Chat Completions (OpenAI-compatible) | `grok-4` | e.g. `grok-4.5` |
 
-> **Groq ≠ Grok**: Groq is the independent fast-inference company (`api.groq.com`); Grok is SpaceXAI's model (`api.x.ai`). They are unrelated — VibeSort supports both.
+> **Groq is not Grok**: Groq is the independent fast-inference company (`api.groq.com`); Grok is SpaceXAI's model (`api.x.ai`). They are unrelated, and VibeSort supports both.
 
 ```ruby
 # Pick a specific model
@@ -170,7 +170,7 @@ client = VibeSort::Client.new(
   temperature: 0.0
 )
 
-# Higher temperature = more creative/random (not recommended for sorting!)
+# Higher temperature = more creative/random (not recommended for sorting)
 creative_client = VibeSort::Client.new(
   api_key: ENV['OPENAI_API_KEY'],
   temperature: 0.5
@@ -219,7 +219,7 @@ The `sort` method always returns a hash with the following structure:
 - **Strings only**: Sorted in ascending alphabetical order (case-sensitive)
 - **Mixed types**: Numbers come before strings; each group sorted within itself
 
-## 🏗️ Architecture
+## Architecture
 
 VibeSort follows a clean, modular architecture:
 
@@ -227,18 +227,18 @@ VibeSort follows a clean, modular architecture:
 - **`VibeSort::Configuration`**: Manages provider, API key, model, and settings
 - **`VibeSort::Sorter`**: Dispatches to the configured provider adapter
 - **`VibeSort::Providers::Base`**: Shared prompt, HTTP plumbing (Faraday), and response validation
-- **`VibeSort::Providers::{OpenAI, Anthropic, Gemini}`**: Provider-specific request/response mapping
+- **`VibeSort::Providers::{OpenAI, Anthropic, Gemini, Groq, SpaceXAI}`**: Provider-specific request/response mapping
 - **`VibeSort::ApiError`**: Custom exception for API-related errors
 
 See the [Architecture Documentation](docs/architecture.md) for more details.
 
-## 📚 Documentation
+## Documentation
 
 - [Architecture Overview](docs/architecture.md)
 - [API Reference](docs/api_reference.md)
 - [Development Guide](docs/development.md)
 
-## 🧪 Development
+## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
@@ -266,33 +266,33 @@ bundle exec rspec --format documentation
 bundle exec rspec spec/vibe/sort_spec.rb
 ```
 
-## 🤔 Why Does This Exist?
+## Why Does This Exist?
 
 This gem was created as an educational exercise to:
 
 1. Explore the capabilities and limitations of LLMs for computational tasks
-2. Demonstrate how to integrate OpenAI's API into Ruby applications
+2. Demonstrate how to integrate LLM APIs into Ruby applications
 3. Provide a template for building Ruby gems with external API dependencies
 4. Spark conversations about appropriate use cases for AI
 
-**Please note**: This is intentionally inefficient and expensive compared to traditional sorting algorithms. It's a conversation starter, not a production solution!
+**Please note**: This is intentionally inefficient and expensive compared to traditional sorting algorithms. It's a conversation starter, not a production solution.
 
-## ⚡ Performance Considerations
+## Performance Considerations
 
 - **Latency**: Each sort requires an API call (typically 1-3 seconds)
-- **Cost**: OpenAI API usage is metered and costs money
+- **Cost**: LLM API usage is metered and costs money
 - **Reliability**: Depends on API availability and internet connection
 - **Accuracy**: Generally accurate, but not guaranteed (unlike algorithmic sorting)
 - **Scale**: Not suitable for large arrays or high-frequency sorting
 
 Traditional sorting (e.g., Ruby's `Array#sort`) is:
 
-- ⚡ **10,000x faster** (microseconds vs seconds)
-- 💰 **Free** (no API costs)
-- 🎯 **100% reliable** (deterministic algorithm)
-- 📈 **Scalable** (handles millions of elements)
+- **10,000x faster** (microseconds vs seconds)
+- **Free** (no API costs)
+- **100% reliable** (deterministic algorithm)
+- **Scalable** (handles millions of elements)
 
-## 🔑 Environment Variables
+## Environment Variables
 
 Set the API key for your chosen provider as an environment variable:
 
@@ -315,16 +315,16 @@ require 'dotenv/load'
 client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
 ```
 
-## 📄 License
+## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with [Faraday](https://lostisland.github.io/faraday/) for HTTP requests
-- Powered by [OpenAI](https://openai.com/), [Anthropic](https://www.anthropic.com/), and [Google Gemini](https://ai.google.dev/) models
+- Powered by [OpenAI](https://openai.com/), [Anthropic](https://www.anthropic.com/), [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), and [SpaceXAI](https://x.ai/) models
 - Inspired by the absurdity and creativity of the AI era
 
 ---
 
-**Remember**: With great AI power comes great responsibility (and API bills). Sort wisely! 🧙‍♂️
+**Remember**: With great AI power comes great responsibility (and API bills). Sort wisely.

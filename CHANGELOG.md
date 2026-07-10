@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 
 - Fully backward compatible: `VibeSort::Client.new(api_key: ...)` still defaults to OpenAI
-- Still zero runtime dependencies beyond Faraday — all providers are called over plain HTTPS
+- Still zero runtime dependencies beyond Faraday, all providers are called over plain HTTPS
 
 ## [0.2.0] - 2025-10-16
 

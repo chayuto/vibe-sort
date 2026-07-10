@@ -521,8 +521,8 @@ Document all public methods:
 # @return [Hash] Result hash with :success, :sorted_array, :error keys
 #
 # @example
-#   client.sort([5, 2, 8])
-#   # => { success: true, sorted_array: [2, 5, 8] }
+# client.sort([5, 2, 8])
+# # => { success: true, sorted_array: [2, 5, 8] }
 def sort(array)
   # ...
 end
@@ -563,4 +563,4 @@ Before submitting a PR:
 - Read the documentation
 - Ask in the community
 
-Happy coding! 🚀
+Happy coding! 

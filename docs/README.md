@@ -2,7 +2,7 @@
 
 Welcome to the VibeSort documentation! This directory contains comprehensive guides for using, understanding, and contributing to the VibeSort gem.
 
-## 📚 Documentation Overview
+## Documentation Overview
 
 ### [Architecture Overview](architecture.md)
 
@@ -52,7 +52,7 @@ Welcome to the VibeSort documentation! This directory contains comprehensive gui
 
 ---
 
-## 🚀 Quick Links
+## Quick Links
 
 ### For Users
 
@@ -76,7 +76,7 @@ Welcome to the VibeSort documentation! This directory contains comprehensive gui
 
 ---
 
-## 📖 Reading Guide
+## Reading Guide
 
 ### I want to use VibeSort in my project
 
@@ -107,25 +107,25 @@ Welcome to the VibeSort documentation! This directory contains comprehensive gui
 
 ---
 
-## 🏗️ Architecture at a Glance
+## Architecture at a Glance
 
 ```
 User Application
-      ↓
+      
 VibeSort::Client (validates input, handles errors)
-      ↓
+      
 VibeSort::Configuration (stores API key, settings)
-      ↓
+      
 VibeSort::Sorter (communicates with OpenAI)
-      ↓
+      
 OpenAI API (GPT model processes request)
-      ↓
+      
 Sorted Array (returned to user)
 ```
 
 ---
 
-## 📝 Example Usage
+## Example Usage
 
 ```ruby
 require 'vibe_sort'
@@ -148,7 +148,7 @@ For more examples, see the [README](../README.md) or [API Reference](api_referen
 
 ---
 
-## 🔧 Key Concepts
+## Key Concepts
 
 ### Configuration
 
@@ -175,7 +175,7 @@ VibeSort never raises exceptions to user code. All errors are caught and returne
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see:
 
@@ -185,22 +185,22 @@ We welcome contributions! Please see:
 
 ---
 
-## 📞 Support
+## Support
 
-- 🐛 [Report a Bug](https://github.com/chayut/vibe-sort/issues/new?labels=bug)
-- 💡 [Request a Feature](https://github.com/chayut/vibe-sort/issues/new?labels=enhancement)
-- 📖 [Read the Docs](README.md)
-- 💬 [Discussions](https://github.com/chayut/vibe-sort/discussions)
+-  [Report a Bug](https://github.com/chayut/vibe-sort/issues/new?labels=bug)
+-  [Request a Feature](https://github.com/chayut/vibe-sort/issues/new?labels=enhancement)
+-  [Read the Docs](README.md)
+-  [Discussions](https://github.com/chayut/vibe-sort/discussions)
 
 ---
 
-## 📜 License
+## License
 
 VibeSort is released under the [MIT License](../LICENSE.txt).
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with [Faraday](https://lostisland.github.io/faraday/)
 - Powered by [OpenAI](https://openai.com/)
@@ -208,4 +208,4 @@ VibeSort is released under the [MIT License](../LICENSE.txt).
 
 ---
 
-**Happy Sorting! 🌀**
+**Happy Sorting! **

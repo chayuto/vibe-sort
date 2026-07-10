@@ -119,11 +119,11 @@ VibeSort follows a layered architecture with clear separation of concerns:
 **Adapter hooks** (implemented per provider): `provider_name`, `endpoint`, `headers`, `build_payload`, `extract_content`
 
 **Adapters and default models**:
-- `Providers::OpenAI` — Chat Completions, `gpt-4o-mini`
-- `Providers::Anthropic` — Messages API with structured outputs (JSON schema), `claude-opus-4-8`
-- `Providers::Gemini` — generateContent with JSON response mode, `gemini-2.5-flash`
-- `Providers::Groq` — OpenAI-compatible (subclasses `Providers::OpenAI`), `llama-3.3-70b-versatile`
-- `Providers::SpaceXAI` — OpenAI-compatible (subclasses `Providers::OpenAI`), `grok-4`
+- `Providers::OpenAI`: Chat Completions, `gpt-4o-mini`
+- `Providers::Anthropic`: Messages API with structured outputs (JSON schema), `claude-opus-4-8`
+- `Providers::Gemini`: generateContent with JSON response mode, `gemini-2.5-flash`
+- `Providers::Groq`: OpenAI-compatible (subclasses `Providers::OpenAI`), `llama-3.3-70b-versatile`
+- `Providers::SpaceXAI`: OpenAI-compatible (subclasses `Providers::OpenAI`), `grok-4`
 
 ### VibeSort::ApiError
 
@@ -244,7 +244,7 @@ VibeSort follows a layered architecture with clear separation of concerns:
 ## Dependencies
 
 ### Runtime
-- **faraday** (~> 2.0): HTTP client library — the only runtime dependency; all providers are called over plain HTTPS
+- **faraday** (~> 2.0): HTTP client library, the only runtime dependency; all providers are called over plain HTTPS
 
 ### Development
 - **rspec** (~> 3.0): Testing framework
