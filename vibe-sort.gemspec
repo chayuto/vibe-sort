@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["Chayut Orapinpatipat"]
   spec.email = ["chayut_o@hotmail.com"]
 
-  spec.summary = "AI-powered array sorting using OpenAI, Anthropic Claude, or Google Gemini"
-  spec.description = "A proof-of-concept Ruby gem that sorts arrays by leveraging LLM APIs (OpenAI Chat Completions, Anthropic Messages, Google Gemini). Demonstrates how AI can be used for computational tasks."
+  spec.summary = "AI-powered array sorting using OpenAI, Anthropic Claude, Google Gemini, Groq, or SpaceXAI Grok"
+  spec.description = "A proof-of-concept Ruby gem that sorts arrays by leveraging LLM APIs (OpenAI Chat Completions, Anthropic Messages, Google Gemini, and the OpenAI-compatible Groq and SpaceXAI Grok APIs). Demonstrates how AI can be used for computational tasks."
   spec.homepage = "https://github.com/chayuto/vibe-sort"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0.0"
@@ -17,6 +17,8 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/chayuto/vibe-sort"
   spec.metadata["changelog_uri"] = "https://github.com/chayuto/vibe-sort/blob/main/CHANGELOG.md"
+  spec.metadata["documentation_uri"] = "https://rubydoc.info/gems/vibe-sort"
+  spec.metadata["bug_tracker_uri"] = "https://github.com/chayuto/vibe-sort/issues"
   spec.metadata["rubygems_mfa_required"] = "true"
 
   # Specify which files should be added to the gem when it is released.

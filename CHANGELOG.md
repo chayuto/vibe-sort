@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-11
+
+### Changed
+
+- Gemspec summary and description now list all five supported providers (OpenAI, Anthropic Claude, Google Gemini, Groq, SpaceXAI Grok)
+- Added `documentation_uri` and `bug_tracker_uri` gem metadata links
+
 ## [0.3.0] - 2026-07-10
 
 ### Added
