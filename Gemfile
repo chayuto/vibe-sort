@@ -12,7 +12,7 @@ group :development, :test do
   # public_suffix 7.x (via webmock -> addressable) requires Ruby >= 3.2;
   # keep the dev bundle installable on Ruby 3.0/3.1, which the gem supports
   gem "public_suffix", "< 7"
-  gem "rspec", "~> 3.0"
+  gem "rspec", "~> 3.13"
   gem "rubocop", "~> 1.21"
   gem "webmock", "~> 3.18"
 end
