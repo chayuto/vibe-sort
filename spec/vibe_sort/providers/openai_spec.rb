@@ -42,6 +42,19 @@ RSpec.describe VibeSort::Providers::OpenAI do
     expect(stub).to have_been_requested
   end
 
+  it "merges extra_params into the payload last, overriding adapter defaults" do
+    client = VibeSort::Client.new(api_key: "test-key", provider: :openai,
+                                  extra_params: { max_tokens: 100, response_format: nil })
+
+    stub = stub_request(:post, endpoint)
+           .with(body: hash_including("max_tokens" => 100, "response_format" => nil))
+           .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: success_body([1]))
+
+    client.sort([1])
+
+    expect(stub).to have_been_requested
+  end
+
   it "returns an error result when the API fails" do
     stub_request(:post, endpoint)
       .to_return(

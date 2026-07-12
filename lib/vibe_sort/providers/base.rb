@@ -25,13 +25,27 @@ module VibeSort
       # @raise [VibeSort::ApiError] if the API request fails
       def perform(array)
         response = connection.post do |req|
-          req.body = build_payload(array)
+          req.body = deep_merge(build_payload(array), config.extra_params)
         end
 
         handle_response(response)
       end
 
       private
+
+      # Merge the user's extra_params into the adapter payload last, so they can
+      # override anything (response_format, temperature, even model). Nested
+      # hashes merge recursively (e.g. Gemini's generationConfig); arrays and
+      # scalars replace.
+      #
+      # @param base [Hash] Adapter-built payload
+      # @param extra [Hash] User-supplied provider-native parameters
+      # @return [Hash] Merged payload
+      def deep_merge(base, extra)
+        base.merge(extra) do |_key, old_val, new_val|
+          old_val.is_a?(Hash) && new_val.is_a?(Hash) ? deep_merge(old_val, new_val) : new_val
+        end
+      end
 
       # Model to use: explicit override from config, or the provider default
       #

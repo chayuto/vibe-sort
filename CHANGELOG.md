@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-12
+
+### Added
+
+- **OpenRouter provider** (`provider: :openrouter`): access hundreds of models through OpenRouter's OpenAI-compatible API. Default model `openai/gpt-4o-mini`; sends OpenRouter's recommended attribution headers
+- **API key format detection**: when `provider:` is omitted, the provider is inferred from the `api_key` prefix (`sk-ant-` → Anthropic, `sk-or-` → OpenRouter, `gsk_` → Groq, `AIza`/`AQ.` → Gemini, `xai-` → SpaceXAI, `sk-` → OpenAI). Unrecognized key formats still default to OpenAI
+- **`extra_params:` option** on `VibeSort::Client.new`: a hash of provider-native request parameters deep-merged into the payload last, so it can override anything the adapter builds (e.g. `max_tokens`, `response_format`, Gemini's nested `generationConfig`, OpenRouter provider-routing preferences)
+- Free-tier model benchmark results (`docs/free_model_benchmark_2026-07-12.md`)
+
+### Changed
+
+- Passing an explicit `provider:` that disagrees with the detected key format now prints a one-line warning to stderr; the explicit provider still wins
+
+### Notes
+
+- Behavior change (hence the minor bump): a provider-prefixed key with no `provider:` argument previously always hit the OpenAI API and failed; it now routes to the detected provider and works. Unrecognized keys with no `provider:` still default to OpenAI, and all explicit-provider call sites behave identically
+- Still no runtime dependencies beyond Faraday
+
 ## [0.3.1] - 2026-07-11
 
 ### Changed

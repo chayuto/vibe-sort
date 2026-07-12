@@ -8,7 +8,8 @@ module VibeSort
       anthropic: Providers::Anthropic,
       gemini: Providers::Gemini,
       groq: Providers::Groq,
-      spacexai: Providers::SpaceXAI
+      spacexai: Providers::SpaceXAI,
+      openrouter: Providers::OpenRouter
     }.freeze
 
     attr_reader :config

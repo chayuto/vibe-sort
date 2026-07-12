@@ -43,6 +43,27 @@ RSpec.describe VibeSort::Providers::Gemini do
     expect(stub).to have_been_requested
   end
 
+  it "deep-merges nested extra_params into generationConfig" do
+    client = VibeSort::Client.new(api_key: "test-key", provider: :gemini,
+                                  extra_params: { generationConfig: { maxOutputTokens: 256 } })
+
+    stub = stub_request(:post, endpoint)
+           .with(
+             body: hash_including(
+               "generationConfig" => {
+                 "temperature" => 0.0,
+                 "responseMimeType" => "application/json",
+                 "maxOutputTokens" => 256
+               }
+             )
+           )
+           .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: success_body([1]))
+
+    client.sort([1])
+
+    expect(stub).to have_been_requested
+  end
+
   it "returns an error result when the API fails" do
     stub_request(:post, endpoint)
       .to_return(

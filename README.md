@@ -1,8 +1,8 @@
 # VibeSort
 
-> **AI-powered array sorting using OpenAI, Anthropic Claude, Google Gemini, Groq, or SpaceXAI Grok**
+> **AI-powered array sorting using OpenAI, Anthropic Claude, Google Gemini, Groq, SpaceXAI Grok, or OpenRouter**
 
-VibeSort is a proof-of-concept Ruby gem that demonstrates sorting arrays by leveraging LLM APIs. Instead of using traditional sorting algorithms, it asks an AI model to do the work. Supports the OpenAI Chat Completions API, the Anthropic Messages API, the Google Gemini API, and the OpenAI-compatible Groq and SpaceXAI (xAI) APIs, with zero dependencies beyond Faraday.
+VibeSort is a proof-of-concept Ruby gem that demonstrates sorting arrays by leveraging LLM APIs. Instead of using traditional sorting algorithms, it asks an AI model to do the work. Supports the OpenAI Chat Completions API, the Anthropic Messages API, the Google Gemini API, and the OpenAI-compatible Groq, SpaceXAI (xAI), and OpenRouter APIs, with zero dependencies beyond Faraday.
 
 [![Gem Version](https://badge.fury.io/rb/vibe-sort.svg)](https://badge.fury.io/rb/vibe-sort)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -13,10 +13,11 @@ This is a **proof-of-concept** and educational project. It is not intended for p
 
 ## Features
 
-- **AI-Powered Sorting**: Uses OpenAI, Anthropic Claude, Google Gemini, Groq, or SpaceXAI Grok models to sort arrays
+- **AI-Powered Sorting**: Uses OpenAI, Anthropic Claude, Google Gemini, Groq, SpaceXAI Grok, or OpenRouter models to sort arrays
 - **Multi-Provider**: Switch providers with a single `provider:` option, no extra dependencies
+- **Key Format Detection**: Omit `provider:` and VibeSort infers it from your API key's prefix
 - **Simple Interface**: Clean, intuitive API with a single `sort` method
-- **Configurable**: Supports custom model and temperature settings
+- **Configurable**: Custom model, temperature, and an `extra_params:` escape hatch for any provider-native request parameter
 - **Error Handling**: Comprehensive error handling with clear error messages
 - **Structured Output**: Uses JSON mode for reliable, parsable responses
 - **Type Validation**: Validates input and output to ensure data integrity
@@ -26,7 +27,7 @@ This is a **proof-of-concept** and educational project. It is not intended for p
 
 - Ruby **3.0** or newer (MRI)
 - Bundler **2.0+**
-- An API key for at least one supported provider (OpenAI, Anthropic, Google Gemini, Groq, or SpaceXAI)
+- An API key for at least one supported provider (OpenAI, Anthropic, Google Gemini, Groq, SpaceXAI, or OpenRouter)
 - Internet connectivity (each sort performs a remote API call)
 
 ## Installation
@@ -121,11 +122,11 @@ end
 
 ### Choosing a Provider
 
-VibeSort defaults to OpenAI, but any supported provider can be selected with the `provider:` option:
+Any supported provider can be selected with the `provider:` option:
 
 ```ruby
-# OpenAI (default)
-client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
+# OpenAI
+client = VibeSort::Client.new(provider: :openai, api_key: ENV['OPENAI_API_KEY'])
 
 # Anthropic Claude
 client = VibeSort::Client.new(provider: :anthropic, api_key: ENV['ANTHROPIC_API_KEY'])
@@ -138,6 +139,9 @@ client = VibeSort::Client.new(provider: :groq, api_key: ENV['GROQ_API_KEY'])
 
 # SpaceXAI (formerly xAI) Grok
 client = VibeSort::Client.new(provider: :spacexai, api_key: ENV['XAI_API_KEY'])
+
+# OpenRouter (hundreds of models behind one API)
+client = VibeSort::Client.new(provider: :openrouter, api_key: ENV['OPENROUTER_API_KEY'])
 ```
 
 | Provider | API | Default model | Override with `model:` |
@@ -147,8 +151,11 @@ client = VibeSort::Client.new(provider: :spacexai, api_key: ENV['XAI_API_KEY'])
 | `:gemini` | generateContent | `gemini-2.5-flash` | e.g. `gemini-2.5-pro` |
 | `:groq` | Chat Completions (OpenAI-compatible) | `llama-3.3-70b-versatile` | any Groq-hosted model |
 | `:spacexai` | Chat Completions (OpenAI-compatible) | `grok-4` | e.g. `grok-4.5` |
+| `:openrouter` | Chat Completions (OpenAI-compatible) | `openai/gpt-4o-mini` | any OpenRouter model ID |
 
 > **Groq is not Grok**: Groq is the independent fast-inference company (`api.groq.com`); Grok is SpaceXAI's model (`api.x.ai`). They are unrelated, and VibeSort supports both.
+
+> **OpenRouter JSON mode caveat**: OpenRouter forwards `response_format: { type: "json_object" }` to the underlying model, but only some models honor it. Models that ignore it produce a "Failed to parse JSON response" error. Stick to models that support JSON mode, or use `extra_params:` to adjust the request.
 
 ```ruby
 # Pick a specific model
@@ -158,6 +165,53 @@ client = VibeSort::Client.new(
   model: 'claude-haiku-4-5'
 )
 ```
+
+### Provider Detection (provider: is optional)
+
+If you omit `provider:`, VibeSort infers it from your API key's prefix:
+
+```ruby
+VibeSort::Client.new(api_key: 'sk-ant-...')  # => :anthropic
+VibeSort::Client.new(api_key: 'sk-or-...')   # => :openrouter
+VibeSort::Client.new(api_key: 'gsk_...')     # => :groq
+VibeSort::Client.new(api_key: 'AIza...')     # => :gemini (classic key)
+VibeSort::Client.new(api_key: 'AQ....')      # => :gemini (newer key format)
+VibeSort::Client.new(api_key: 'xai-...')     # => :spacexai
+VibeSort::Client.new(api_key: 'sk-...')      # => :openai
+```
+
+Key prefixes are conventions, not contracts, so detection is deliberately soft:
+
+- Unrecognized key formats (proxies, gateways, self-hosted endpoints) default to `:openai` — same behavior as before v0.4.0
+- An explicit `provider:` always wins; if it disagrees with the detected format you get a one-line stderr warning, never an error
+
+### Extra Request Parameters
+
+`extra_params:` deep-merges a hash of provider-native parameters into the request payload **last**, so it can add to or override anything VibeSort builds:
+
+```ruby
+# Cap completion length (OpenAI/Groq/SpaceXAI/OpenRouter wire format)
+client = VibeSort::Client.new(
+  api_key: ENV['OPENAI_API_KEY'],
+  extra_params: { max_tokens: 200 }
+)
+
+# Gemini uses its own parameter names — nested hashes merge recursively
+client = VibeSort::Client.new(
+  provider: :gemini,
+  api_key: ENV['GEMINI_API_KEY'],
+  extra_params: { generationConfig: { maxOutputTokens: 256 } }
+)
+
+# OpenRouter provider-routing preferences
+client = VibeSort::Client.new(
+  provider: :openrouter,
+  api_key: ENV['OPENROUTER_API_KEY'],
+  extra_params: { provider: { sort: 'throughput' } }
+)
+```
+
+Keys are provider-native and passed through untranslated: `max_tokens` means whatever your provider says it means, and Gemini users write Gemini's camelCase names. Overriding core keys (`response_format`, `temperature`, even `model`) is allowed — it's an escape hatch, use with care.
 
 ### Advanced Configuration
 
@@ -225,9 +279,10 @@ VibeSort follows a clean, modular architecture:
 
 - **`VibeSort::Client`**: Public interface for users
 - **`VibeSort::Configuration`**: Manages provider, API key, model, and settings
+- **`VibeSort::KeyDetector`**: Best-effort provider inference from API key prefixes
 - **`VibeSort::Sorter`**: Dispatches to the configured provider adapter
 - **`VibeSort::Providers::Base`**: Shared prompt, HTTP plumbing (Faraday), and response validation
-- **`VibeSort::Providers::{OpenAI, Anthropic, Gemini, Groq, SpaceXAI}`**: Provider-specific request/response mapping
+- **`VibeSort::Providers::{OpenAI, Anthropic, Gemini, Groq, SpaceXAI, OpenRouter}`**: Provider-specific request/response mapping
 - **`VibeSort::ApiError`**: Custom exception for API-related errors
 
 See the [Architecture Documentation](docs/architecture.md) for more details.
@@ -297,11 +352,12 @@ Traditional sorting (e.g., Ruby's `Array#sort`) is:
 Set the API key for your chosen provider as an environment variable:
 
 ```bash
-export OPENAI_API_KEY='your-api-key-here'     # provider: :openai (default)
-export ANTHROPIC_API_KEY='your-api-key-here'  # provider: :anthropic
-export GEMINI_API_KEY='your-api-key-here'     # provider: :gemini
-export GROQ_API_KEY='your-api-key-here'       # provider: :groq
-export XAI_API_KEY='your-api-key-here'        # provider: :spacexai
+export OPENAI_API_KEY='your-api-key-here'      # provider: :openai (fallback default)
+export ANTHROPIC_API_KEY='your-api-key-here'   # provider: :anthropic
+export GEMINI_API_KEY='your-api-key-here'      # provider: :gemini
+export GROQ_API_KEY='your-api-key-here'        # provider: :groq
+export XAI_API_KEY='your-api-key-here'         # provider: :spacexai
+export OPENROUTER_API_KEY='your-api-key-here'  # provider: :openrouter
 ```
 
 Or use a `.env` file with the `dotenv` gem:
@@ -322,7 +378,7 @@ The gem is available as open source under the terms of the [MIT License](https:/
 ## Acknowledgments
 
 - Built with [Faraday](https://lostisland.github.io/faraday/) for HTTP requests
-- Powered by [OpenAI](https://openai.com/), [Anthropic](https://www.anthropic.com/), [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), and [SpaceXAI](https://x.ai/) models
+- Powered by [OpenAI](https://openai.com/), [Anthropic](https://www.anthropic.com/), [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [SpaceXAI](https://x.ai/), and [OpenRouter](https://openrouter.ai/) models
 - Inspired by the absurdity and creativity of the AI era
 
 ---

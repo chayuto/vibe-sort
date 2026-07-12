@@ -6,7 +6,7 @@ The main public interface for the VibeSort gem.
 
 ### Class Methods
 
-#### `new(api_key:, temperature: 0.0, provider: :openai, model: nil)`
+#### `new(api_key:, temperature: 0.0, provider: nil, model: nil, extra_params: {})`
 
 Creates a new VibeSort client instance.
 
@@ -18,24 +18,27 @@ Creates a new VibeSort client instance.
   - Lower values (0.0-0.3): More deterministic and consistent
   - Higher values (0.7-2.0): More random and creative
   - Ignored by providers whose current models do not accept it (Anthropic)
-- `provider` (Symbol or String, optional): LLM provider (default: `:openai`)
-  - Supported: `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`
+- `provider` (Symbol or String, optional): LLM provider
+  - Supported: `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`, `:openrouter`
+  - When omitted, inferred from the `api_key` prefix via `VibeSort::KeyDetector`; unrecognized formats default to `:openai`
+  - When explicit and the key prefix suggests a different provider, a one-line warning is printed to stderr and the explicit provider is used
 - `model` (String, optional): Model ID override (default: the provider's default model)
+- `extra_params` (Hash, optional): Provider-native request parameters deep-merged into the payload last, so they can override anything the adapter builds (default: `{}`)
 
 **Returns:** `VibeSort::Client` instance
 
 **Raises:**
 
-- `ArgumentError`: If api_key is nil or empty, or the provider is unknown
+- `ArgumentError`: If api_key is nil or empty, or an explicit provider is unknown
 
 **Example:**
 
 ```ruby
-# Basic initialization (OpenAI, default provider)
-client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
+# Provider inferred from the key prefix (sk-ant-... => :anthropic)
+client = VibeSort::Client.new(api_key: ENV['ANTHROPIC_API_KEY'])
 
-# Anthropic Claude
-client = VibeSort::Client.new(provider: :anthropic, api_key: ENV['ANTHROPIC_API_KEY'])
+# Explicit provider
+client = VibeSort::Client.new(provider: :openai, api_key: ENV['OPENAI_API_KEY'])
 
 # Google Gemini with a custom model
 client = VibeSort::Client.new(provider: :gemini, api_key: ENV['GEMINI_API_KEY'], model: 'gemini-2.5-pro')
@@ -44,6 +47,14 @@ client = VibeSort::Client.new(provider: :gemini, api_key: ENV['GEMINI_API_KEY'],
 client = VibeSort::Client.new(
   api_key: ENV['OPENAI_API_KEY'],
   temperature: 0.2
+)
+
+# With extra provider-native request parameters
+client = VibeSort::Client.new(
+  provider: :openrouter,
+  api_key: ENV['OPENROUTER_API_KEY'],
+  model: 'meta-llama/llama-3.3-70b-instruct',
+  extra_params: { max_tokens: 200 }
 )
 ```
 
@@ -110,7 +121,7 @@ Configuration object for VibeSort. Usually not used directly by end users.
 
 ### Class Methods
 
-#### `new(api_key:, temperature: 0.0, provider: :openai, model: nil)`
+#### `new(api_key:, temperature: 0.0, provider: nil, model: nil, extra_params: {})`
 
 Creates a new configuration object.
 
@@ -118,8 +129,9 @@ Creates a new configuration object.
 
 - `api_key` (String, required): API key for the selected provider
 - `temperature` (Float, optional): Model temperature (default: 0.0)
-- `provider` (Symbol or String, optional): `:openai` (default), `:anthropic`, `:gemini`, `:groq`, or `:spacexai`
+- `provider` (Symbol, String, or nil, optional): `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`, or `:openrouter`; nil (default) infers the provider from the api_key prefix, falling back to `:openai`
 - `model` (String, optional): Model ID override (nil uses the provider's default)
+- `extra_params` (Hash, optional): Provider-native request parameters deep-merged into the payload last (default: `{}`)
 
 **Raises:**
 
@@ -161,6 +173,40 @@ Returns the configured model override, or nil when using the provider default (r
 
 **Returns:** String or nil
 
+#### `extra_params`
+
+Returns the configured extra request parameters hash (read-only).
+
+**Returns:** Hash
+
+---
+
+## VibeSort::KeyDetector
+
+Best-effort provider inference from API key prefixes. Prefixes are conventions, not contracts — detection is only a soft default and a source of non-fatal warnings, never validation.
+
+### Class Methods
+
+#### `detect(api_key)`
+
+**Parameters:**
+
+- `api_key` (String, required): API key to inspect
+
+**Returns:** Symbol (detected provider) or nil (unrecognized format)
+
+**Prefix map (ordered — specific prefixes checked before `sk-`):**
+
+| Prefix | Provider |
+|---|---|
+| `sk-ant-` | `:anthropic` |
+| `sk-or-` | `:openrouter` |
+| `sk-` | `:openai` |
+| `gsk_` | `:groq` |
+| `AIza` | `:gemini` (classic key) |
+| `AQ.` | `:gemini` (newer key format) |
+| `xai-` | `:spacexai` |
+
 ---
 
 ## VibeSort::Sorter
@@ -199,7 +245,7 @@ Performs the sorting operation via the configured provider's API.
 
 Maps provider symbols to adapter classes.
 
-**Value:** `{ openai:, anthropic:, gemini:, groq:, spacexai: }`
+**Value:** `{ openai:, anthropic:, gemini:, groq:, spacexai:, openrouter: }`
 
 ---
 
@@ -214,11 +260,14 @@ Internal provider adapters. `Providers::Base` holds the shared prompt, Faraday H
 | `Providers::Gemini` | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | `gemini-2.5-flash` |
 | `Providers::Groq` | `https://api.groq.com/openai/v1/chat/completions` | `llama-3.3-70b-versatile` |
 | `Providers::SpaceXAI` | `https://api.x.ai/v1/chat/completions` | `grok-4` |
+| `Providers::OpenRouter` | `https://openrouter.ai/api/v1/chat/completions` | `openai/gpt-4o-mini` |
 
 Notes:
 
 - The Anthropic adapter uses structured outputs (JSON schema) and does not send `temperature` (rejected by current Claude models)
-- The Groq and SpaceXAI adapters subclass `Providers::OpenAI` (OpenAI-compatible APIs)
+- The Groq, SpaceXAI, and OpenRouter adapters subclass `Providers::OpenAI` (OpenAI-compatible APIs)
+- The OpenRouter adapter sends OpenRouter's recommended attribution headers (`HTTP-Referer`, `X-Title`)
+- `Providers::Base` deep-merges `config.extra_params` into every payload last, so it can override anything the adapter builds
 
 ---
 
@@ -307,7 +356,7 @@ All sorting operations return a consistent hash structure:
 
 ### API Errors
 
-The `{Provider}` prefix names the configured provider (OpenAI, Anthropic, Gemini, Groq, or SpaceXAI):
+The `{Provider}` prefix names the configured provider (OpenAI, Anthropic, Gemini, Groq, SpaceXAI, or OpenRouter):
 
 | Error Message Pattern | Cause | Solution |
 |----------------------|-------|----------|
@@ -455,11 +504,12 @@ results = threads.map(&:value)
 Set the API key for whichever provider you use:
 
 ```bash
-export OPENAI_API_KEY='sk-your-key-here'      # provider: :openai (default)
+export OPENAI_API_KEY='sk-your-key-here'      # provider: :openai (fallback default)
 export ANTHROPIC_API_KEY='your-key-here'      # provider: :anthropic
 export GEMINI_API_KEY='your-key-here'         # provider: :gemini
 export GROQ_API_KEY='your-key-here'           # provider: :groq
 export XAI_API_KEY='your-key-here'            # provider: :spacexai
+export OPENROUTER_API_KEY='your-key-here'     # provider: :openrouter
 ```
 
 **Usage:**
@@ -472,9 +522,9 @@ client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
 
 ## Version
 
-Current version: `0.3.0`
+Current version: `0.4.0`
 
 ```ruby
 VibeSort::VERSION
-# => "0.3.0"
+# => "0.4.0"
 ```

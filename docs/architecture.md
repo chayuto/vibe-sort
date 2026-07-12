@@ -20,9 +20,10 @@ VibeSort follows a layered architecture with clear separation of concerns:
                   ▼
 ┌─────────────────────────────────────────┐
 │    VibeSort::Configuration              │
-│  - Provider selection                   │
+│  - Provider selection (explicit or      │
+│    inferred via KeyDetector)            │
 │  - API key management                   │
-│  - Model override                       │
+│  - Model override, extra_params         │
 │  - Temperature settings                 │
 └─────────────────┬───────────────────────┘
                   │
@@ -37,10 +38,11 @@ VibeSort follows a layered architecture with clear separation of concerns:
 │   VibeSort::Providers::Base             │
 │  - Shared prompt                        │
 │  - HTTP client (Faraday)                │
+│  - extra_params deep merge              │
 │  - Response parsing & validation        │
 ├─────────────────────────────────────────┤
 │  OpenAI │ Anthropic │ Gemini │          │
-│  Groq   │ SpaceXAI                      │
+│  Groq   │ SpaceXAI  │ OpenRouter        │
 │  (request/response wire formats)        │
 └─────────────────┬───────────────────────┘
                   │
@@ -50,6 +52,7 @@ VibeSort follows a layered architecture with clear separation of concerns:
 │  api.openai.com │ api.anthropic.com     │
 │  generativelanguage.googleapis.com      │
 │  api.groq.com   │ api.x.ai              │
+│  openrouter.ai                          │
 └─────────────────────────────────────────┘
 ```
 
@@ -67,7 +70,7 @@ VibeSort follows a layered architecture with clear separation of concerns:
 - Return standardized response hashes
 
 **Key Methods**:
-- `initialize(api_key:, temperature: 0.0, provider: :openai, model: nil)`: Creates client with configuration
+- `initialize(api_key:, temperature: 0.0, provider: nil, model: nil, extra_params: {})`: Creates client with configuration
 - `sort(array)`: Sorts array and returns result hash
 
 **Return Format**:
@@ -84,19 +87,26 @@ VibeSort follows a layered architecture with clear separation of concerns:
 **Purpose**: Encapsulates configuration settings.
 
 **Responsibilities**:
-- Store provider selection and API key
-- Store model override and temperature setting
+- Resolve the provider: explicit argument wins (with a non-fatal stderr warning on a mismatched key prefix); otherwise inferred from the key prefix via `KeyDetector`, defaulting to `:openai`
+- Store API key, model override, temperature, and extra_params
 - Validate API key presence and provider name
 
 **Key Methods**:
-- `initialize(api_key:, temperature: 0.0, provider: :openai, model: nil)`: Creates configuration
-- Raises `ArgumentError` if API key is nil/empty or provider is unknown
+- `initialize(api_key:, temperature: 0.0, provider: nil, model: nil, extra_params: {})`: Creates configuration
+- Raises `ArgumentError` if API key is nil/empty or an explicit provider is unknown
 
 **Attributes**:
 - `api_key`: Provider API key (String)
-- `provider`: `:openai`, `:anthropic`, `:gemini`, `:groq`, or `:spacexai` (Symbol)
+- `provider`: `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`, or `:openrouter` (Symbol)
 - `model`: Model ID override, or nil for the provider default (String or nil)
 - `temperature`: Model temperature (Float, 0.0-2.0; not sent to Anthropic)
+- `extra_params`: Provider-native request parameters deep-merged into the payload last (Hash)
+
+### VibeSort::KeyDetector
+
+**Purpose**: Best-effort provider inference from API key prefixes (`sk-ant-` → `:anthropic`, `sk-or-` → `:openrouter`, `gsk_` → `:groq`, `AIza`/`AQ.` → `:gemini`, `xai-` → `:spacexai`, `sk-` → `:openai`).
+
+Prefixes are conventions, not contracts — providers ship multiple key formats concurrently and new formats appear without notice. Detection is therefore only a soft default and a source of non-fatal warnings, never validation: `detect` returns nil for unrecognized formats, and callers fall back to `:openai`.
 
 ### VibeSort::Sorter
 
@@ -113,6 +123,7 @@ VibeSort follows a layered architecture with clear separation of concerns:
 **`Providers::Base` responsibilities**:
 - Hold the shared sorting prompt
 - Build the HTTP connection with Faraday
+- Deep-merge `config.extra_params` into the adapter payload last (nested hashes merge recursively; arrays and scalars replace)
 - Parse and validate JSON responses (shared across providers)
 - Raise `ApiError` on failures
 
@@ -124,6 +135,7 @@ VibeSort follows a layered architecture with clear separation of concerns:
 - `Providers::Gemini`: generateContent with JSON response mode, `gemini-2.5-flash`
 - `Providers::Groq`: OpenAI-compatible (subclasses `Providers::OpenAI`), `llama-3.3-70b-versatile`
 - `Providers::SpaceXAI`: OpenAI-compatible (subclasses `Providers::OpenAI`), `grok-4`
+- `Providers::OpenRouter`: OpenAI-compatible (subclasses `Providers::OpenAI`), `openai/gpt-4o-mini`, adds OpenRouter's recommended attribution headers
 
 ### VibeSort::ApiError
 

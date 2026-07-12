@@ -10,20 +10,34 @@ module VibeSort
     # @param api_key [String] API key for the selected provider
     # @param temperature [Float] Temperature for the model (default: 0.0).
     #   Ignored by providers whose current models do not accept it (Anthropic).
-    # @param provider [Symbol, String] LLM provider: :openai (default), :anthropic, or :gemini
+    # @param provider [Symbol, String, nil] LLM provider: :openai, :anthropic, :gemini,
+    #   :groq, :spacexai, or :openrouter. When omitted, the provider is inferred from
+    #   the api_key prefix (e.g. "sk-ant-..." routes to Anthropic), falling back to
+    #   :openai for unrecognized key formats.
     # @param model [String, nil] Model ID override (nil uses the provider's default)
+    # @param extra_params [Hash] Provider-native request parameters deep-merged into
+    #   the request payload last, so they can override anything the adapter builds
     # @raise [ArgumentError] if api_key or provider is invalid
     #
-    # @example OpenAI (default provider)
-    #   client = VibeSort::Client.new(api_key: ENV['OPENAI_API_KEY'])
+    # @example Provider inferred from the key prefix
+    #   client = VibeSort::Client.new(api_key: ENV['ANTHROPIC_API_KEY']) # sk-ant-... => :anthropic
     #
-    # @example Anthropic Claude
-    #   client = VibeSort::Client.new(provider: :anthropic, api_key: ENV['ANTHROPIC_API_KEY'])
+    # @example OpenAI (explicit)
+    #   client = VibeSort::Client.new(provider: :openai, api_key: ENV['OPENAI_API_KEY'])
     #
     # @example Google Gemini with a custom model
     #   client = VibeSort::Client.new(provider: :gemini, api_key: ENV['GEMINI_API_KEY'], model: 'gemini-2.5-pro')
-    def initialize(api_key:, temperature: 0.0, provider: :openai, model: nil)
-      @config = Configuration.new(api_key: api_key, temperature: temperature, provider: provider, model: model)
+    #
+    # @example OpenRouter with extra request parameters
+    #   client = VibeSort::Client.new(
+    #     provider: :openrouter,
+    #     api_key: ENV['OPENROUTER_API_KEY'],
+    #     model: 'meta-llama/llama-3.3-70b-instruct',
+    #     extra_params: { max_tokens: 200 }
+    #   )
+    def initialize(api_key:, temperature: 0.0, provider: nil, model: nil, extra_params: {})
+      @config = Configuration.new(api_key: api_key, temperature: temperature, provider: provider, model: model,
+                                  extra_params: extra_params)
     end
 
     # Sort an array of numbers and/or strings using the configured provider's API
@@ -53,7 +67,7 @@ module VibeSort
     # @example API error
     #   result = client.sort([1, 2, 3]) # with invalid API key
     #   #=> { success: false, sorted_array: [], error: "OpenAI API error: Invalid API key" }
-    #   # The error prefix names the configured provider (OpenAI, Anthropic, or Gemini)
+    #   # The error prefix names the configured provider (OpenAI, Anthropic, Gemini, ...)
     def sort(array)
       # Validate input
       unless valid_input?(array)
