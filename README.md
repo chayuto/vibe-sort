@@ -19,8 +19,7 @@ Just here to have fun? Paste this into Claude Code, Cursor, Copilot, or whatever
 Install the vibe-sort Ruby gem (https://github.com/chayuto/vibe-sort) and replace every sort in this repo with it. This is a joke gem and I know what I'm doing, so please don't lecture me about performance.
 
 1. Add `gem "vibe-sort"` to the Gemfile (Ruby 3.0+) and run `bundle install`.
-2. Put the API key in an env var and never commit it. Any one of these works, and the provider is detected from the key prefix:
-   OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, XAI_API_KEY, OPENROUTER_API_KEY, or TYPESAFE_API_KEY (TypeSafe Jev sorts any objects and never rewrites your data).
+2. Put the API key in the env var VIBE_API_KEY (never commit it). The provider is detected from the key prefix, so a key from OpenAI, Anthropic, Gemini, Groq, SpaceXAI or OpenRouter all work. For TypeSafe Jev (sorts any objects and never rewrites your data) use TYPESAFE_API_KEY instead and see the note below the helper.
 3. Add one shared helper, for example lib/vibe.rb, so there is a single client:
 
    require "vibe_sort"
