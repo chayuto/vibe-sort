@@ -10,9 +10,9 @@ GEM
     addressable (2.9.0)
       public_suffix (>= 2.0.2, < 8.0)
     ast (2.4.3)
-    bigdecimal (3.3.1)
+    bigdecimal (4.1.2)
     coderay (1.1.3)
-    crack (1.0.0)
+    crack (1.0.1)
       bigdecimal
       rexml
     diff-lcs (1.6.2)
@@ -76,7 +76,7 @@ GEM
       unicode-emoji (~> 4.1)
     unicode-emoji (4.1.0)
     uri (1.1.1)
-    webmock (3.25.1)
+    webmock (3.26.2)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
@@ -92,7 +92,7 @@ DEPENDENCIES
   rspec (~> 3.0)
   rubocop (~> 1.21)
   vibe-sort!
-  webmock (~> 3.18)
+  webmock (~> 3.26)
 
 BUNDLED WITH
    2.5.11
