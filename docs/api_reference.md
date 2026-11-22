@@ -19,7 +19,7 @@ Creates a new VibeSort client instance.
   - Higher values (0.7-2.0): More random and creative
   - Ignored by providers whose current models do not accept it (Anthropic)
 - `provider` (Symbol or String, optional): LLM provider
-  - Supported: `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`, `:openrouter`
+  - Supported: `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`, `:openrouter`, `:jev` (alias `:typesafe`)
   - When omitted, inferred from the `api_key` prefix via `VibeSort::KeyDetector`; unrecognized formats default to `:openai`
   - When explicit and the key prefix suggests a different provider, a one-line warning is printed to stderr and the explicit provider is used
 - `model` (String, optional): Model ID override (default: the provider's default model)
@@ -129,7 +129,7 @@ Creates a new configuration object.
 
 - `api_key` (String, required): API key for the selected provider
 - `temperature` (Float, optional): Model temperature (default: 0.0)
-- `provider` (Symbol, String, or nil, optional): `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`, or `:openrouter`; nil (default) infers the provider from the api_key prefix, falling back to `:openai`
+- `provider` (Symbol, String, or nil, optional): `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`, `:openrouter`, or `:jev` (alias `:typesafe`); nil (default) infers the provider from the api_key prefix (or routes to System One, see the README), falling back to `:openai`
 - `model` (String, optional): Model ID override (nil uses the provider's default)
 - `extra_params` (Hash, optional): Provider-native request parameters deep-merged into the payload last (default: `{}`)
 
@@ -245,7 +245,7 @@ Performs the sorting operation via the configured provider's API.
 
 Maps provider symbols to adapter classes.
 
-**Value:** `{ openai:, anthropic:, gemini:, groq:, spacexai:, openrouter: }`
+**Value:** `{ openai:, anthropic:, gemini:, groq:, spacexai:, openrouter:, jev: }`
 
 ---
 
@@ -261,6 +261,7 @@ Internal provider adapters. `Providers::Base` holds the shared prompt, Faraday H
 | `Providers::Groq` | `https://api.groq.com/openai/v1/chat/completions` | `llama-3.3-70b-versatile` |
 | `Providers::SpaceXAI` | `https://api.x.ai/v1/chat/completions` | `grok-4` |
 | `Providers::OpenRouter` | `https://openrouter.ai/api/v1/chat/completions` | `openai/gpt-4o-mini` |
+| `Providers::Jev` | `https://api.typesafe.ai/v1/systemone` (or `https://openrouter.ai/api/v1/systemone`) | `jev-latest` (`~typesafe/jev-latest` on OpenRouter) |
 
 Notes:
 
@@ -268,6 +269,14 @@ Notes:
 - The Groq, SpaceXAI, and OpenRouter adapters subclass `Providers::OpenAI` (OpenAI-compatible APIs)
 - The OpenRouter adapter sends OpenRouter's recommended attribution headers (`HTTP-Referer`, `X-Title`)
 - `Providers::Base` deep-merges `config.extra_params` into every payload last, so it can override anything the adapter builds
+
+---
+
+## System One (Jev)
+
+`VibeSort::Client#sort(array, **options)` and `#sort_with_metadata(array, **options)` accept, for `:jev` providers only: `by:` (alias `prompt:`), `order:` (`:asc`/`:desc`), `strategy:` (`:choice`, `:score`, `:noul`, `:bogo`), `rubric:`, `tie_break:`, `tie_epsilon:`, `confidence_floor:`, `max_attempts:`, `threshold:`, `strict:`, `long_context:`, `shuffle_options:`. The same keys (plus `max_retries:`, `timeout:`, `openrouter_referer:`, `openrouter_title:`) may be passed to `Client.new` or set globally with `VibeSort.configure`. `Client.new` also takes `base_url:`.
+
+`#sort_with_metadata` returns a `VibeSort::Result` (`items`, `strategy`, `model`, `gateway`, `api_calls`, `usage`, `item_metadata`, `warnings`) and raises on failure. Errors subclass `VibeSort::ApiError` (`AuthenticationError`, `PaymentRequiredError`, `AuthorizationError`, `ValidationError`, `ContextLengthError`, `PayloadTooLargeError`, `EdgeFirewallError`, `RateLimitError`, `OverloadedError`), except `ConfigurationError` (an `ArgumentError`) and `BogoExhaustedError`. See the README for strategies and examples.
 
 ---
 
@@ -510,6 +519,7 @@ export GEMINI_API_KEY='your-key-here'         # provider: :gemini
 export GROQ_API_KEY='your-key-here'           # provider: :groq
 export XAI_API_KEY='your-key-here'            # provider: :spacexai
 export OPENROUTER_API_KEY='your-key-here'     # provider: :openrouter
+export TYPESAFE_API_KEY='your-key-here'       # provider: :jev (optional TYPESAFE_BASE_URL)
 ```
 
 **Usage:**

@@ -2,7 +2,7 @@
 
 > **AI-powered array sorting using OpenAI, Anthropic Claude, Google Gemini, Groq, SpaceXAI Grok, OpenRouter, or TypeSafe Jev**
 
-VibeSort is a proof-of-concept Ruby gem that demonstrates sorting arrays by leveraging LLM APIs. Instead of using traditional sorting algorithms, it asks an AI model to do the work. Supports the OpenAI Chat Completions API, the Anthropic Messages API, the Google Gemini API, and the OpenAI-compatible Groq, SpaceXAI (xAI), and OpenRouter APIs, with zero dependencies beyond Faraday.
+VibeSort is a proof-of-concept Ruby gem that demonstrates sorting arrays by leveraging LLM APIs. Instead of using traditional sorting algorithms, it asks an AI model to do the work. Supports the OpenAI Chat Completions API, the Anthropic Messages API, the Google Gemini API, and the OpenAI-compatible Groq, SpaceXAI (xAI), and OpenRouter APIs, plus TypeSafe's Jev decision model (System One), with zero dependencies beyond Faraday.
 
 [![Gem Version](https://badge.fury.io/rb/vibe-sort.svg)](https://badge.fury.io/rb/vibe-sort)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -22,13 +22,13 @@ This is a **proof-of-concept** and educational project. It is not intended for p
 - **Error Handling**: Comprehensive error handling with clear error messages
 - **Structured Output**: Uses JSON mode for reliable, parsable responses
 - **Type Validation**: Validates input and output to ensure data integrity
-- **Mixed-Type Support**: Sorts arrays containing integers, floats, and strings
+- **Mixed-Type Support**: Sorts arrays containing integers, floats, and strings (any Ruby objects with Jev)
 
 ## Requirements
 
 - Ruby **3.0** or newer (MRI)
 - Bundler **2.0+**
-- An API key for at least one supported provider (OpenAI, Anthropic, Google Gemini, Groq, SpaceXAI, or OpenRouter)
+- An API key for at least one supported provider (OpenAI, Anthropic, Google Gemini, Groq, SpaceXAI, OpenRouter, or TypeSafe)
 - Internet connectivity (each sort performs a remote API call)
 
 ## Installation
@@ -153,6 +153,7 @@ client = VibeSort::Client.new(provider: :openrouter, api_key: ENV['OPENROUTER_AP
 | `:groq` | Chat Completions (OpenAI-compatible) | `llama-3.3-70b-versatile` | any Groq-hosted model |
 | `:spacexai` | Chat Completions (OpenAI-compatible) | `grok-4` | e.g. `grok-4.5` |
 | `:openrouter` | Chat Completions (OpenAI-compatible) | `openai/gpt-4o-mini` | any OpenRouter model ID |
+| `:jev` (alias `:typesafe`) | System One (`/v1/systemone`) | `jev-latest` (`~typesafe/jev-latest` via OpenRouter) | `jev-1.14.0` etc. See [Sorting with Decision Models](#sorting-with-decision-models-typesafe-jev) |
 
 > **Groq is not Grok**: Groq is the independent fast-inference company (`api.groq.com`); Grok is SpaceXAI's model (`api.x.ai`). They are unrelated, and VibeSort supports both.
 
@@ -184,6 +185,7 @@ VibeSort::Client.new(api_key: 'sk-...')      # => :openai
 Key prefixes are conventions, not contracts, so detection is deliberately soft:
 
 - Unrecognized key formats (proxies, gateways, self-hosted endpoints) default to `:openai` — same behavior as before v0.4.0
+- System One (Jev) is selected by `provider: :jev`, by an `sk-or-` key combined with a `jev` model or a `strategy:`, or by `TYPESAFE_API_KEY` when no `api_key:` is given. A plain `sk-or-` key still means OpenRouter chat
 - An explicit `provider:` always wins; if it disagrees with the detected format you get a one-line stderr warning, never an error
 
 ### Sorting with Decision Models (TypeSafe Jev)
@@ -298,7 +300,7 @@ result = client.sort([5, :symbol, 12])
 puts result[:error]
 # => "Input must be an array of numbers or strings"
 
-# Empty array
+# Empty array (generative providers; Jev accepts it and returns [] without an API call)
 result = client.sort([])
 puts result[:error]
 # => "Input must be an array of numbers or strings"
@@ -312,7 +314,7 @@ puts result[:error]
 
 ### Return Value Structure
 
-The `sort` method always returns a hash with the following structure:
+The `sort` method always returns a hash with the following structure (for every provider, Jev included; `sort_with_metadata` is the Jev-only variant that returns a `VibeSort::Result`):
 
 ```ruby
 {
@@ -327,6 +329,7 @@ The `sort` method always returns a hash with the following structure:
 - **Numbers only**: Sorted in ascending numerical order
 - **Strings only**: Sorted in ascending alphabetical order (case-sensitive)
 - **Mixed types**: Numbers come before strings; each group sorted within itself
+- **Jev (System One)**: Ordering comes from the model's judgments for your `by:` criterion (default: natural order), never from `<=>`; numbers and dates are treated as text
 
 ## Architecture
 
@@ -390,7 +393,7 @@ This gem was created as an educational exercise to:
 
 ## Performance Considerations
 
-- **Latency**: Each sort requires an API call (typically 1-3 seconds)
+- **Latency**: Generative providers need one API call per sort (typically 1-3 seconds); Jev strategies need 1 (`:score`) to roughly N log N (`:noul`) calls
 - **Cost**: LLM API usage is metered and costs money
 - **Reliability**: Depends on API availability and internet connection
 - **Accuracy**: Generally accurate, but not guaranteed (unlike algorithmic sorting)

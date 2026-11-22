@@ -97,7 +97,7 @@ VibeSort follows a layered architecture with clear separation of concerns:
 
 **Attributes**:
 - `api_key`: Provider API key (String)
-- `provider`: `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`, or `:openrouter` (Symbol)
+- `provider`: `:openai`, `:anthropic`, `:gemini`, `:groq`, `:spacexai`, `:openrouter`, or `:jev` / `:typesafe` (Symbol). Routing between these is decided by `VibeSort::ProviderResolver`
 - `model`: Model ID override, or nil for the provider default (String or nil)
 - `temperature`: Model temperature (Float, 0.0-2.0; not sent to Anthropic)
 - `extra_params`: Provider-native request parameters deep-merged into the payload last (Hash)
@@ -136,6 +136,7 @@ Prefixes are conventions, not contracts — providers ship multiple key formats 
 - `Providers::Groq`: OpenAI-compatible (subclasses `Providers::OpenAI`), `llama-3.3-70b-versatile`
 - `Providers::SpaceXAI`: OpenAI-compatible (subclasses `Providers::OpenAI`), `grok-4`
 - `Providers::OpenRouter`: OpenAI-compatible (subclasses `Providers::OpenAI`), `openai/gpt-4o-mini`, adds OpenRouter's recommended attribution headers
+- `Providers::Jev`: TypeSafe System One (does not subclass `Providers::Base`). Builds a `SystemOne::Client` (`POST /v1/systemone`, TypeSafe Direct or OpenRouter) and runs one of `SystemOne::Strategies::{ChoiceSort, ScoreSort, NoulSort, BogoSort}`, which work on item indices and return the original objects as a `VibeSort::Result`. `SystemOne::Serializer` sanitises values for TypeSafe's JSON rules
 
 ### VibeSort::ApiError
 
