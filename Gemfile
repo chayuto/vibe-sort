@@ -6,6 +6,8 @@ source "https://rubygems.org"
 gemspec
 
 gem "rake", "~> 13.4"
+# json 3.x (pulled in by rubocop 1.92) makes the provider specs fail with an arity error; root cause not yet investigated
+gem "json", "< 3"
 
 group :development, :test do
   gem "pry", "~> 0.16"
