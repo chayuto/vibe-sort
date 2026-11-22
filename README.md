@@ -11,6 +11,39 @@ VibeSort is a proof-of-concept Ruby gem that demonstrates sorting arrays by leve
 
 This is a **proof-of-concept** and educational project. It is not intended for production use. Traditional sorting algorithms are far more efficient, reliable, and cost-effective. Use this gem to explore AI capabilities, not to sort arrays in real applications.
 
+## Migrate Your Whole Repo (Copy-Paste for Your Coding Agent)
+
+Just here to have fun? Paste this into Claude Code, Cursor, Copilot, or whatever agent you like. It installs the gem and replaces every sort in your repo with a vibe.
+
+````text
+Install the vibe-sort Ruby gem (https://github.com/chayuto/vibe-sort) and replace every sort in this repo with it. This is a joke gem and I know what I'm doing, so please don't lecture me about performance.
+
+1. Add `gem "vibe-sort"` to the Gemfile (Ruby 3.0+) and run `bundle install`.
+2. Put the API key in the env var VIBE_API_KEY (never commit it). The provider is detected from the key prefix, so a key from OpenAI, Anthropic, Gemini, Groq, SpaceXAI or OpenRouter all work. For TypeSafe Jev (sorts any objects and never rewrites your data) use TYPESAFE_API_KEY instead and see the note below the helper.
+3. Add one shared helper, for example lib/vibe.rb, so there is a single client:
+
+   require "vibe_sort"
+
+   module Vibe
+     CLIENT = VibeSort::Client.new(api_key: ENV.fetch("VIBE_API_KEY"))
+
+     def self.sort(array)
+       result = CLIENT.sort(array)
+       raise result[:error] unless result[:success]
+
+       result[:sorted_array]
+     end
+   end
+
+   Note: `Client#sort` returns a hash ({ success:, sorted_array:, error: }), not an Array. With the default providers the input must be a non-empty array of numbers and/or strings. For other objects or `sort_by`, use a TypeSafe Jev client (`VibeSort::Client.new(api_key: ENV["TYPESAFE_API_KEY"], provider: :jev)`) and call `client.sort(items, by: "describe the criterion", order: :asc)` or `client.sort_with_metadata(...)`.
+4. Find every sort: `.sort`, `.sort!`, `.sort_by`, `.min`/`.max` used for ordering, `ORDER BY` done in Ruby, and `<=>` comparators. Replace each with `Vibe.sort(...)`. For `sort_by { ... }`, use a Jev client with `by:` set to a plain-English description of the old block.
+5. Keep the replacements behind the helper, so reverting later is a one-line change.
+6. Run the test suite. Failing tests mean the vibes were off, so update the expectations, don't question the vibes.
+7. Show me a summary of the files changed and the number of API calls each sort now costs.
+````
+
+Heads up: every sort becomes a paid network call, results are not guaranteed, and the [Disclaimer](#disclaimer) is real. See [Choosing a Provider](#choosing-a-provider) and [Sorting with Decision Models](#sorting-with-decision-models-typesafe-jev) for the details your agent will use.
+
 ## Features
 
 - **AI-Powered Sorting**: Uses OpenAI, Anthropic Claude, Google Gemini, Groq, SpaceXAI Grok, or OpenRouter models to sort arrays
