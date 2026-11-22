@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-22
+
+### Added
+
+- **TypeSafe Jev (System One) support** (`provider: :jev`, alias `:typesafe`): a discriminative decision model that answers typed `choice` / `score` / `noul` questions instead of generating text, so results are always the caller's original objects (any Ruby objects, not just numbers and strings)
+- **Dual-gateway routing**: TypeSafe Direct (`https://api.typesafe.ai/v1/systemone`, `TYPESAFE_API_KEY`, `TYPESAFE_BASE_URL`) and OpenRouter (`https://openrouter.ai/api/v1/systemone`), through one wire-compatible client. `sk-or-` keys with a `jev` model or a `strategy:` route to System One; plain `sk-or-` keys still use OpenRouter chat
+- **Four strategies** via `strategy:`: `:choice` (draft-pick selection sort, default), `:score` (one-call normalized batch scoring with optional adjacent tie-break), `:noul` (pairwise merge sort robust to non-transitive judgments, with a symmetric pair cache) and `:bogo` (vibe bogosort with a `max_attempts` safety cap and `strict:` mode)
+- `VibeSort::Client#sort_with_metadata` returning a `VibeSort::Result` (items, strategy, resolved model, gateway, API call count, token usage, per-item scores/confidence/probabilities, warnings)
+- Per-call and per-client options `by:` (alias `prompt:`), `order:`, `strategy:`, `rubric:`, `tie_break:`, `max_attempts:`, `threshold:`, `strict:`, `long_context:`; process-wide defaults via `VibeSort.configure`
+- Typed errors: `ConfigurationError`, `AuthenticationError`, `PaymentRequiredError`, `AuthorizationError`, `ValidationError`, `ContextLengthError`, `PayloadTooLargeError`, `EdgeFirewallError` (Cloudflare WAF 403, exposes `cf_ray`), `RateLimitError`, `OverloadedError`, `BogoExhaustedError`; retries on 429/524/529 and transient network failures with exponential backoff, full jitter and `Retry-After`
+- JSON sanitising for System One (NaN/Infinity, unsafe integers, BigDecimal, invalid UTF-8, nesting depth, circular references) and a client-side 32 MiB payload guard
+- Opt-in live smoke specs (`LIVE_JEV_TESTS=1`)
+
+### Notes
+
+- Fully backwards compatible: generative providers, key-prefix detection, `Client#sort` return shape and every 0.4.0 spec are unchanged. `Client.new(api_key:)` now defaults `api_key:` to `nil` so `TYPESAFE_API_KEY` can supply it; `strategy:` and other Jev-only options raise `ConfigurationError` with a generative provider
+- Jev treats numbers and dates as text, and `<=>` is deliberately never used as a fallback
+- Still no runtime dependencies beyond Faraday
+- Deferred to 0.6.0: image sorting (`box`), hybrid LLM-rubric + Jev pipelines
+
 ## [0.4.0] - 2026-07-12
 
 ### Added
