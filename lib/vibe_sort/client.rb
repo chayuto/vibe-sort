@@ -35,9 +35,23 @@ module VibeSort
     #     model: 'meta-llama/llama-3.3-70b-instruct',
     #     extra_params: { max_tokens: 200 }
     #   )
-    def initialize(api_key:, temperature: 0.0, provider: nil, model: nil, extra_params: {})
+    #
+    # @example TypeSafe Jev (System One) with the pairwise merge-sort strategy
+    #   client = VibeSort::Client.new(api_key: ENV['TYPESAFE_API_KEY'], provider: :jev, strategy: :noul)
+    #
+    # @example Jev through OpenRouter (an sk-or- key plus a jev model or a strategy: routes there)
+    #   client = VibeSort::Client.new(api_key: ENV['OPENROUTER_API_KEY'], model: 'jev-latest')
+    #
+    # System One accepts extra keywords (+strategy:+, +by:+, +order:+, +long_context:+, ...), all
+    # of which can also be passed per call to #sort / #sort_with_metadata. +api_key+ may be omitted
+    # when TYPESAFE_API_KEY is set. See VibeSort::Providers::Jev for the full list.
+    #
+    # @param base_url [String, nil] System One gateway root override (Jev only)
+    def initialize(api_key: nil, temperature: 0.0, provider: nil, model: nil, extra_params: {}, base_url: nil, **jev_options)
+      validate_jev_options!(jev_options)
       @config = Configuration.new(api_key: api_key, temperature: temperature, provider: provider, model: model,
-                                  extra_params: extra_params)
+                                  extra_params: extra_params, base_url: base_url, jev_options: jev_options)
+      reject_jev_options_for_llm!(jev_options)
     end
 
     # Sort an array of numbers and/or strings using the configured provider's API
@@ -68,20 +82,27 @@ module VibeSort
     #   result = client.sort([1, 2, 3]) # with invalid API key
     #   #=> { success: false, sorted_array: [], error: "OpenAI API error: Invalid API key" }
     #   # The error prefix names the configured provider (OpenAI, Anthropic, Gemini, ...)
-    def sort(array)
-      # Validate input
+    #
+    # With a System One (Jev) provider the array may hold any objects (the originals are
+    # returned, never rebuilt from model text), an empty array is valid, and per-call
+    # options such as +strategy:+, +by:+ and +order:+ are accepted.
+    #
+    # @example Jev, descending, by a custom criterion
+    #   client.sort(%w[ghost-pepper jalapeno habanero], by: "spiciness", order: :desc)
+    #   #=> { success: true, sorted_array: ["ghost-pepper", "habanero", "jalapeno"] }
+    def sort(array, **options)
       unless valid_input?(array)
         return {
           success: false,
           sorted_array: [],
-          error: "Input must be an array of numbers or strings"
+          error: config.jev? ? "Input must be an array" : "Input must be an array of numbers or strings"
         }
       end
 
       # Perform the sort via API
       sorter = Sorter.new(config)
-      sorter.perform(array)
-    rescue ApiError => e
+      sorter.perform(array, **options)
+    rescue ApiError, ConfigurationError, BogoExhaustedError => e
       {
         success: false,
         sorted_array: [],
@@ -95,14 +116,50 @@ module VibeSort
       }
     end
 
+    # Sort with a System One (Jev) provider and get the full picture back.
+    #
+    # Unlike #sort this raises on failure (VibeSort::ApiError subclasses,
+    # ConfigurationError, BogoExhaustedError) and returns a VibeSort::Result carrying the
+    # sorted items, resolved model, API call count, token usage, per-item scores /
+    # confidences / probabilities, and warnings.
+    #
+    # @param array [Array] any objects
+    # @param options [Hash] per-call System One options (+strategy:+, +by:+, +order:+, +rubric:+, ...)
+    # @return [VibeSort::Result]
+    #
+    # @example
+    #   result = client.sort_with_metadata(%w[pizza kale cake], by: "tastiness", strategy: :score)
+    #   result.items         #=> ["kale", "pizza", "cake"]
+    #   result.item_metadata #=> [{ index: 1, score: 1.2, confidence: 0.8, ... }, ...]
+    def sort_with_metadata(array, **options)
+      raise ArgumentError, "Input must be an array" unless array.is_a?(Array)
+
+      Sorter.new(config).perform_with_metadata(array, **options)
+    end
+
     private
 
-    # Validate that input is an array of numbers and/or strings
+    def validate_jev_options!(jev_options)
+      unknown = jev_options.keys - Providers::Jev::CLIENT_OPTIONS
+      return if unknown.empty?
+
+      raise ConfigurationError, "Unknown option(s): #{unknown.join(", ")}"
+    end
+
+    def reject_jev_options_for_llm!(jev_options)
+      return if config.jev? || jev_options.empty?
+
+      raise ConfigurationError, "#{jev_options.keys.join(", ")}: only supported by System One (:jev) providers, not :#{config.provider}"
+    end
+
+    # Validate the input array: Jev accepts any array; generative providers need a
+    # non-empty array of numbers and/or strings
     #
     # @param array [Object] Input to validate
     # @return [Boolean] true if valid, false otherwise
     def valid_input?(array)
       return false unless array.is_a?(Array)
+      return true if config.jev?
       return false if array.empty?
 
       array.all? { |item| item.is_a?(Numeric) || item.is_a?(String) }

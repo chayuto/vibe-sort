@@ -6,7 +6,7 @@ module VibeSort
   class Configuration
     PROVIDERS = %i[openai anthropic gemini groq spacexai openrouter].freeze
 
-    attr_reader :api_key, :temperature, :provider, :model, :extra_params
+    attr_reader :api_key, :temperature, :provider, :model, :extra_params, :base_url, :gateway, :jev_options
 
     # Initialize a new Configuration
     #
@@ -19,18 +19,48 @@ module VibeSort
     # @param model [String, nil] Model ID override (nil uses the provider's default)
     # @param extra_params [Hash] Provider-native request parameters deep-merged into
     #   the payload last, so they can override anything (e.g. { max_tokens: 100 })
+    # @param base_url [String, nil] System One gateway root (Jev only)
+    # @param jev_options [Hash] System One options (strategy:, long_context:, ...); see Providers::Jev
     # @raise [ArgumentError] if api_key is nil or empty, or provider is unknown
-    def initialize(api_key:, temperature: 0.0, provider: nil, model: nil, extra_params: {})
-      raise ArgumentError, "API key cannot be nil or empty" if api_key.nil? || api_key.empty?
-
-      @provider = resolve_provider(provider, api_key)
-      @api_key = api_key
+    # @raise [ConfigurationError] for contradictory options (e.g. strategy: with a generative provider)
+    def initialize(api_key: nil, temperature: 0.0, provider: nil, model: nil, extra_params: {}, base_url: nil, jev_options: {})
+      validate_provider_name!(provider)
+      resolution = ProviderResolver.resolve(api_key: api_key, provider: provider, model: model,
+                                            strategy: jev_options[:strategy], base_url: base_url)
       @temperature = temperature
-      @model = model
       @extra_params = extra_params
+      @jev_options = jev_options
+      apply(resolution, provider, model)
+    end
+
+    # @return [Boolean] true when routed to TypeSafe System One (Jev)
+    def jev?
+      provider == :jev
     end
 
     private
+
+    def apply(resolution, requested_provider, model)
+      @api_key = resolution.api_key
+      @base_url = resolution.base_url
+      @gateway = resolution.gateway
+      if resolution.jev?
+        @provider = :jev
+        @model = resolution.model
+      else
+        @provider = resolve_provider(requested_provider, @api_key)
+        @model = model
+      end
+    end
+
+    def validate_provider_name!(provider)
+      return if provider.nil?
+
+      explicit = provider.to_s.to_sym
+      return if PROVIDERS.include?(explicit) || ProviderResolver::JEV_PROVIDERS.include?(explicit)
+
+      raise ArgumentError, "Unknown provider: #{provider.inspect} (supported: #{(PROVIDERS + ProviderResolver::JEV_PROVIDERS).join(", ")})"
+    end
 
     # Resolve the provider: explicit argument wins (with a non-fatal warning if the
     # key prefix suggests a different provider); otherwise infer from the key prefix,
@@ -45,8 +75,6 @@ module VibeSort
       return detected || :openai if provider.nil?
 
       explicit = provider.to_s.to_sym
-      raise ArgumentError, "Unknown provider: #{provider.inspect} (supported: #{PROVIDERS.join(", ")})" unless PROVIDERS.include?(explicit)
-
       warn "vibe-sort: api_key format suggests :#{detected} but provider is :#{explicit}" if detected && detected != explicit
       explicit
     end

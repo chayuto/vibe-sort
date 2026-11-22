@@ -1,6 +1,6 @@
 # VibeSort
 
-> **AI-powered array sorting using OpenAI, Anthropic Claude, Google Gemini, Groq, SpaceXAI Grok, or OpenRouter**
+> **AI-powered array sorting using OpenAI, Anthropic Claude, Google Gemini, Groq, SpaceXAI Grok, OpenRouter, or TypeSafe Jev**
 
 VibeSort is a proof-of-concept Ruby gem that demonstrates sorting arrays by leveraging LLM APIs. Instead of using traditional sorting algorithms, it asks an AI model to do the work. Supports the OpenAI Chat Completions API, the Anthropic Messages API, the Google Gemini API, and the OpenAI-compatible Groq, SpaceXAI (xAI), and OpenRouter APIs, with zero dependencies beyond Faraday.
 
@@ -14,6 +14,7 @@ This is a **proof-of-concept** and educational project. It is not intended for p
 ## Features
 
 - **AI-Powered Sorting**: Uses OpenAI, Anthropic Claude, Google Gemini, Groq, SpaceXAI Grok, or OpenRouter models to sort arrays
+- **Decision-Model Sorting**: TypeSafe's Jev (System One) sorts any Ruby objects through four strategies without ever rewriting your data
 - **Multi-Provider**: Switch providers with a single `provider:` option, no extra dependencies
 - **Key Format Detection**: Omit `provider:` and VibeSort infers it from your API key's prefix
 - **Simple Interface**: Clean, intuitive API with a single `sort` method
@@ -185,6 +186,60 @@ Key prefixes are conventions, not contracts, so detection is deliberately soft:
 - Unrecognized key formats (proxies, gateways, self-hosted endpoints) default to `:openai` — same behavior as before v0.4.0
 - An explicit `provider:` always wins; if it disagrees with the detected format you get a one-line stderr warning, never an error
 
+### Sorting with Decision Models (TypeSafe Jev)
+
+[TypeSafe AI's **Jev**](https://docs.typesafe.ai) is a *System One* model: it never writes text or rewrites your array. It answers typed questions (`choice`, `score`, `noul`) about items and returns probabilities, so vibe-sort can only ever return **your original objects**, never hallucinated, duplicated or dropped ones. Any Ruby objects work (not just numbers and strings), and `strategy:` picks how the questions are asked.
+
+```ruby
+# TypeSafe Direct (POST https://api.typesafe.ai/v1/systemone)
+client = VibeSort::Client.new(api_key: ENV["TYPESAFE_API_KEY"], provider: :jev)
+# ...or just set TYPESAFE_API_KEY and omit api_key: entirely
+client = VibeSort::Client.new
+
+# Through OpenRouter, no waitlist: an sk-or- key plus a jev model (or a strategy:) routes to System One
+client = VibeSort::Client.new(api_key: ENV["OPENROUTER_API_KEY"], model: "jev-latest")
+
+client.sort(%w[jalapeno ghost-pepper habanero], by: "spiciness", order: :desc)
+# => { success: true, sorted_array: ["ghost-pepper", "habanero", "jalapeno"] }
+```
+
+| Strategy | How it sorts | API calls (N items) | Meme factor |
+| :--- | :--- | :--- | :--- |
+| `:choice` (default) | Draft pick: "which item comes NEXT?", repeated | N-1 (tournament chunking above 255 items) | Fantasy football for arrays |
+| `:score` | Rates every item on a relative rubric in one request, sorts by score, optionally settles near-ties | 1 (+1 with `tie_break:`) | Judges' panel |
+| `:noul` | Pairwise "should A come before B?" feeding a merge sort that survives non-transitive opinions | about N log N | A very long committee meeting |
+| `:bogo` | Shuffle, ask "is this sorted?", repeat until convinced or out of attempts (`max_attempts:` defaults to 25) | up to `max_attempts` | Maximum. Sorting by vibes, literally |
+
+Per-call options (all of them can also go on `Client.new` or `VibeSort.configure`): `by:` (alias `prompt:`), `order:` (`:asc`/`:desc`), `strategy:`, `rubric:` (2-10 level descriptions, `:score`), `tie_break:`, `max_attempts:`/`threshold:`/`strict:` (`:bogo`), `long_context:` (opt in to Jev's 262k window).
+
+`sort` keeps returning the usual `{ success:, sorted_array: }` hash. For the full picture use `sort_with_metadata`, which returns a `VibeSort::Result` and raises on failure:
+
+```ruby
+result = client.sort_with_metadata(%w[pizza kale cake], by: "tastiness", strategy: :score)
+result.items          # => ["kale", "pizza", "cake"] (your original objects)
+result.model          # => "jev-1.14.0" (the resolved version)
+result.gateway        # => :typesafe or :openrouter
+result.api_calls      # => 1
+result.usage          # => { input_tokens: 214, output_tokens: 12, cost: nil }
+result.item_metadata  # => [{ index: 1, score: 0.4, confidence: 0.91, probabilities: {...} }, ...]
+result.warnings       # => ["Low confidence (0.41) scoring item 2; its score may be bimodal"]
+```
+
+```ruby
+VibeSort.configure do |c|
+  c.jev_strategy = :score
+  c.jev_max_retries = 5       # 429 / 524 / 529 and network errors, with backoff + jitter
+  c.jev_long_context = false
+end
+```
+
+Good to know:
+
+- **Vibes, not arithmetic.** Jev reads numbers and dates as text, and vibe-sort deliberately does not fall back to `<=>`. `[100, 2, 19]` may not come back in numeric order. Only arrays of 0 or 1 elements skip the API.
+- **The edge firewall.** TypeSafe sits behind a Cloudflare WAF that can block requests whose items look like shell commands or URLs (`curl https://...`). That surfaces as `VibeSort::EdgeFirewallError` (with the `cf_ray`); it is not retried.
+- **Errors** are typed: `AuthenticationError` (401), `PaymentRequiredError` (402, OpenRouter credits), `ContextLengthError` (try `long_context: true`), `ValidationError`, `PayloadTooLargeError` (32 MiB), `RateLimitError`, `OverloadedError`, `BogoExhaustedError` (`strict: true`). All but the last subclass `VibeSort::ApiError`.
+- Live smoke tests are opt-in: `LIVE_JEV_TESTS=1 TYPESAFE_API_KEY=... bundle exec rspec spec/integration`.
+
 ### Extra Request Parameters
 
 `extra_params:` deep-merges a hash of provider-native parameters into the request payload **last**, so it can add to or override anything VibeSort builds:
@@ -283,6 +338,7 @@ VibeSort follows a clean, modular architecture:
 - **`VibeSort::Sorter`**: Dispatches to the configured provider adapter
 - **`VibeSort::Providers::Base`**: Shared prompt, HTTP plumbing (Faraday), and response validation
 - **`VibeSort::Providers::{OpenAI, Anthropic, Gemini, Groq, SpaceXAI, OpenRouter}`**: Provider-specific request/response mapping
+- **`VibeSort::Providers::Jev` + `VibeSort::SystemOne::*`**: TypeSafe System One transport, serializer and the four sorting strategies
 - **`VibeSort::ApiError`**: Custom exception for API-related errors
 
 See the [Architecture Documentation](docs/architecture.md) for more details.

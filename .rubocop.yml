@@ -25,3 +25,28 @@ Metrics/MethodLength:
 
 Layout/LineLength:
   Enabled: false
+
+# The System One strategies are small state machines around a remote model; splitting
+# them further to satisfy size metrics hurts readability more than it helps.
+Metrics/AbcSize:
+  Exclude:
+    - 'lib/vibe_sort/system_one/**/*'
+    - 'lib/vibe_sort/provider_resolver.rb'
+    - 'lib/vibe_sort/providers/jev.rb'
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'lib/vibe_sort/system_one/**/*'
+    - 'lib/vibe_sort/provider_resolver.rb'
+    - 'lib/vibe_sort/providers/jev.rb'
+Metrics/PerceivedComplexity:
+  Exclude:
+    - 'lib/vibe_sort/system_one/**/*'
+    - 'lib/vibe_sort/provider_resolver.rb'
+    - 'lib/vibe_sort/providers/jev.rb'
+Metrics/ClassLength:
+  Exclude:
+    - 'lib/vibe_sort/system_one/**/*'
+
+# Keyword arguments are the idiomatic way to take many options in Ruby
+Metrics/ParameterLists:
+  CountKeywordArgs: false
