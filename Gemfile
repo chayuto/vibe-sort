@@ -16,5 +16,5 @@ group :development, :test do
   gem "public_suffix", "< 7"
   gem "rspec", "~> 3.13"
   gem "rubocop", "~> 1.92"
-  gem "webmock", "~> 3.26"
+  gem "webmock", "~> 3.40"
 end
